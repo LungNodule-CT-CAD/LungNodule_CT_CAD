@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "baseUrl": "src",
+    "paths": {
+      "@/*": ["*"],
+      "@components/*": ["components/*"],
+      "@pages/*": ["pages/*"],
+      "@store/*": ["store/*"],
+      "@assets/*": ["assets/*"]
+    },
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true, // 新增：允许导入.tsx扩展名
+    "resolveJsonModule": true, // 推荐：允许导入JSON文件
+    "isolatedModules": true, // 推荐：确保每个文件可以单独编译
+    "noEmit": true // 推荐：如果使用tsc以外的工具编译
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"] // 推荐：明确排除不需要编译的目录
+}    

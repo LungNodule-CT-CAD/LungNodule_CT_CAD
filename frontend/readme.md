@@ -1,7 +1,7 @@
 # **基于 React 的 CT 肺结节检测系统前端开发文档**
 
 ## **1. 引言**
-本项目旨在开发一个基于 React 的前端界面，用于 CT 肺结节检测系统。系统支持用户上传 CT 图像、调整窗宽窗位、检测并标注肺结节、切换显示多个结节等功能。采用 B/S 架构，前端通过 React 实现，后端提供 API 支持图像处理和模型推理。
+本项目旨在开发一个基于 React 的前端界面，用于 CT 肺结节检测系统。系统支持用户上传 CT 图像、调整窗宽窗位、检测并标注肺结节、切换显示多个结节等功能。采用 B/S 架构，前端通过 React 实现，后端提供 API 支持图像处理和模型推理。项目使用 Vite 作为构建工具，结合 TypeScript 和 SWC 优化开发效率。
 
 ---
 
@@ -35,21 +35,23 @@ lung-nodule-detection-frontend/
 │   ├── assets/                 # 项目样式、图片等
 │   │   └── styles.css          # 全局样式
 │   ├── components/             # 可复用组件
-│   │   ├── ImageUploader.js    # 图像上传组件
-│   │   ├── ImageViewer.js      # 图像显示组件
-│   │   ├── WindowAdjuster.js   # 窗宽窗位调整组件
-│   │   ├── NoduleList.js       # 结节列表组件
-│   │   └── NoduleZoom.js       # 结节放大组件
+│   │   ├── ImageUploader.tsx   # 图像上传组件
+│   │   ├── ImageViewer.tsx     # 图像显示组件
+│   │   ├── WindowAdjuster.tsx  # 窗宽窗位调整组件
+│   │   ├── NoduleList.tsx      # 结节列表组件
+│   │   └── NoduleZoom.tsx      # 结节放大组件
 │   ├── pages/                  # 页面级组件
-│   │   └── Home.js             # 主页面
+│   │   └── Home.tsx            # 主页面
 │   ├── store/                  # Redux 状态管理
-│   │   ├── actions.js          # 定义 actions
-│   │   ├── reducers.js         # 定义 reducers
-│   │   └── index.js            # Redux store 配置
-│   ├── App.js                  # 根组件
-│   ├── index.js                # React 入口
-│   └── router.js               # React Router 配置（可选）
+│   │   ├── actions.ts          # 定义 actions
+│   │   ├── reducers.ts         # 定义 reducers
+│   │   └── index.ts            # Redux store 配置
+│   ├── App.tsx                 # 根组件
+│   ├── index.tsx               # React 入口
+│   └── router.tsx              # React Router 配置（可选）
 ├── package.json                # 项目依赖和脚本
+├── vite.config.ts              # Vite 配置
+├── tsconfig.json               # TypeScript 配置
 ├── .gitignore                  # Git 忽略文件
 └── README.md                   # 项目说明
 ```
@@ -58,7 +60,7 @@ lung-nodule-detection-frontend/
 
 ## **4. 组件功能说明**
 
-### **4.1 ImageUploader.js**
+### **4.1 ImageUploader.tsx**
 - **功能**：支持用户上传 DICOM 文件并发送至后端。
 - **实现**：
   - 使用 `<input type="file">` 捕获文件。
@@ -66,35 +68,35 @@ lung-nodule-detection-frontend/
   - 将返回的图像数据存入 Redux。
 - **输出**：更新 Redux 的 `uploadedImage` 状态。
 
-### **4.2 ImageViewer.js**
+### **4.2 ImageViewer.tsx**
 - **功能**：显示 CT 图像并支持结节标注。
 - **实现**：
   - 使用 `<canvas>` 渲染图像，支持动态调整显示。
   - 根据 Redux 的 `nodules` 数据绘制结节框。
 - **依赖**：Redux 的 `uploadedImage` 和 `nodules`。
 
-### **4.3 WindowAdjuster.js**
+### **4.3 WindowAdjuster.tsx**
 - **功能**：调整窗宽（WW）和窗位（WL）。
 - **实现**：
   - 使用滑块（`<input type="range">`）调整 WW/WL。
   - 调用后端 API（`POST /adjust-window`）更新图像。
 - **默认值**：WW: 1500 HU，WL: -600 HU。
 
-### **4.4 NoduleList.js**
+### **4.4 NoduleList.tsx**
 - **功能**：展示检测到的结节列表，支持选择。
 - **实现**：
   - 使用按钮或列表展示结节。
   - 点击后更新 Redux 的 `selectedNodule`。
 - **依赖**：Redux 的 `nodules`。
 
-### **4.5 NoduleZoom.js**
+### **4.5 NoduleZoom.tsx**
 - **功能**：放大显示选中的结节区域。
 - **实现**：
   - 根据 `selectedNodule` 坐标裁剪并放大图像。
   - 提供切换按钮更新 `selectedNodule`。
 - **依赖**：与 `NoduleList` 联动。
 
-### **4.6 Home.js**
+### **4.6 Home.tsx**
 - **功能**：整合所有组件，提供整体布局。
 - **布局**：
   - 顶部：系统名称、Logo。
@@ -107,25 +109,27 @@ lung-nodule-detection-frontend/
 ## **5. 状态管理（Redux）**
 
 ### **5.1 状态结构**
-```javascript
-{
-  uploadedImage: null,  // 图像数据（base64 格式）
-  ww: 1500,             // 窗宽
-  wl: -600,             // 窗位
-  nodules: [],          // 结节列表 [{ id, x, y, width, height }, ...]
-  selectedNodule: null  // 当前选中结节
+```typescript
+interface State {
+  uploadedImage: string | null;  // 图像数据（base64 格式）
+  ww: number;                    // 窗宽
+  wl: number;                    // 窗位
+  nodules: Array<{ id: number; x: number; y: number; width: number; height: number }>; // 结节列表
+  selectedNodule: { id: number; x: number; y: number; width: number; height: number } | null; // 当前选中结节
 }
 ```
 
 ### **5.2 Actions**
-- **uploadImage(file)**：上传图像，更新 `uploadedImage`。
-- **adjustWindow(ww, wl)**：调整 WW/WL，更新图像。
+- **uploadImage(file: File)**：上传图像，更新 `uploadedImage`。
+- **adjustWindow(ww: number, wl: number)**：调整 WW/WL，更新图像。
 - **detectNodules()**：检测结节，更新 `nodules`。
-- **selectNodule(nodule)**：选择结节，更新 `selectedNodule`。
+- **selectNodule(nodule: { id: number; x: number; y: number; width: number; height: number } | null)**：选择结节，更新 `selectedNodule`。
 
 ### **5.3 Reducers**
-```javascript
-const initialState = {
+```typescript
+import { Reducer } from 'redux';
+
+const initialState: State = {
   uploadedImage: null,
   ww: 1500,
   wl: -600,
@@ -133,7 +137,7 @@ const initialState = {
   selectedNodule: null,
 };
 
-export const rootReducer = (state = initialState, action) => {
+const rootReducer: Reducer<State> = (state = initialState, action) => {
   switch (action.type) {
     case 'SET_IMAGE':
       return { ...state, uploadedImage: action.payload };
@@ -149,21 +153,24 @@ export const rootReducer = (state = initialState, action) => {
       return state;
   }
 };
+
+export default rootReducer;
 ```
 
 ### **5.4 示例代码**
-```javascript
-// actions.js
+```typescript
+// actions.ts
+import { Dispatch } from 'redux';
 import axios from 'axios';
 
-export const uploadImage = (file) => async (dispatch) => {
+export const uploadImage = (file: File) => async (dispatch: Dispatch) => {
   const formData = new FormData();
   formData.append('file', file);
   const response = await axios.post('/api/upload', formData);
   dispatch({ type: 'SET_IMAGE', payload: response.data.image });
 };
 
-export const adjustWindow = (ww, wl) => async (dispatch, getState) => {
+export const adjustWindow = (ww: number, wl: number) => async (dispatch: Dispatch, getState: any) => {
   const { uploadedImage } = getState();
   const response = await axios.post('/api/adjust-window', { ww, wl, image: uploadedImage });
   dispatch({ type: 'SET_IMAGE', payload: response.data.image });
@@ -171,22 +178,25 @@ export const adjustWindow = (ww, wl) => async (dispatch, getState) => {
   dispatch({ type: 'SET_WL', payload: wl });
 };
 
-export const detectNodules = () => async (dispatch, getState) => {
+export const detectNodules = () => async (dispatch: Dispatch, getState: any) => {
   const { uploadedImage } = getState();
   const response = await axios.post('/api/detect-nodules', { image: uploadedImage });
   dispatch({ type: 'SET_NODULES', payload: response.data.nodules });
 };
 
-export const selectNodule = (nodule) => ({ type: 'SELECT_NODULE', payload: nodule });
+export const selectNodule = (nodule: { id: number; x: number; y: number; width: number; height: number } | null) => ({
+  type: 'SELECT_NODULE',
+  payload: nodule,
+});
 ```
 
 ---
 
 ## **6. 开发流程建议**
-1. **初始化项目**：运行 `npx create-react-app lung-nodule-detection-frontend`。
-2. **安装依赖**：`npm install redux react-redux redux-thunk axios react-router-dom`.
-3. **组件开发**：按上述说明逐一实现组件。
-4. **状态管理**：配置 Redux，测试数据流。
+1. **初始化项目**：运行 `npm create vite@latest . -- --template react-ts`。
+2. **安装依赖**：`npm install redux react-redux @types/react-redux redux-thunk @types/redux-thunk axios @types/axios react-router-dom @types/react-router-dom swc-loader`.
+3. **组件开发**：按上述说明逐一实现 `.tsx` 组件。
+4. **状态管理**：配置 Redux，测试 TypeScript 类型安全。
 5. **API 联调**：与后端对接，确保功能正常。
 6. **样式优化**：使用 Tailwind CSS 或 CSS 文件美化界面。
 7. **测试**：验证功能完整性和性能。
@@ -195,6 +205,9 @@ export const selectNodule = (nodule) => ({ type: 'SELECT_NODULE', payload: nodul
 
 ## **7. 参考资源**
 - React: https://reactjs.org/
+- Vite: https://vitejs.dev/
+- TypeScript: https://www.typescriptlang.org/
+- SWC: https://swc.rs/
 - Redux: https://redux.js.org/
 - Axios: https://axios-http.com/
 - Tailwind CSS: https://tailwindcss.com/
@@ -202,7 +215,7 @@ export const selectNodule = (nodule) => ({ type: 'SELECT_NODULE', payload: nodul
 ---
 
 ## **8. 结语**
-本文档提供了基于 React 的 CT 肺结节检测系统前端开发的完整指南。遵循建议的项目结构和状态管理方案，可高效完成开发任务。如需进一步支持，请联系后端团队。
+本文档提供了基于 Vite + React + TypeScript + SWC 的 CT 肺结节检测系统前端开发的完整指南。遵循建议的项目结构和状态管理方案，可高效完成开发任务。如需进一步支持，请联系后端团队。
 
 **开发团队**：（待填写）  
-**日期**：2025 年 6 月 8 日
+**日期**：2025 年 6 月 9 日
