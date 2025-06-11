@@ -3,9 +3,18 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Tech-blue color scheme */
+  --main-bg-color: #0a192f;         /* 深海军蓝 */
+  --panel-bg-color: #1c2a4a;        /* 稍亮的面板蓝 */
+  --text-color: #ccd6f6;            /* 浅灰蓝色文本 */
+  --accent-color: #64ffda;          /* 亮青色/绿松石色 */
+  --accent-color-darker: #00bfa5;   /* 深一点的青色 */
+  --border-color: #303C55;          /* 边框颜色 */
+  --shadow-color: rgba(100, 255, 218, 0.1); /* 阴影颜色 */
+
+  color-scheme: dark;
+  color: var(--text-color);
+  background-color: var(--main-bg-color);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,11 +24,11 @@
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: var(--accent-color);
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: var(--accent-color-darker);
 }
 
 body {
@@ -42,27 +51,17 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--panel-bg-color);
+  border-color: var(--border-color);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: all 0.25s;
+  color: var(--text-color);
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px var(--shadow-color);
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
 }

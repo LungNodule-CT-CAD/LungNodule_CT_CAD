@@ -1,3 +1,1063 @@
+  public\assests/:
+  public\index.html:
+  
+
+    src\assets\logo.jpeg:
+    [Binary or unreadable file]
+
+    src\assets\styles.css:
+    /* src/assets/styles.css */
+
+/* 全局布局样式 */
+.home-container {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.main-layout {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* 面板通用样式 */
+.panel {
+  flex: 1;
+}
+
+.panel.image-panel {
+  flex: 2;
+}
+
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 统一 h3 标题样式 */
+h3 {
+  color: var(--accent-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-top: 0;
+}
+
+/* ImageUploader.tsx 样式 */
+.uploader-info {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 10px;
+}
+
+/* ImageViewer.tsx 样式 */
+.image-canvas {
+  border: 1px solid var(--border-color);
+  max-width: 100%;
+  background-color: #000; /* 给canvas一个黑色背景 */
+}
+
+/* WindowAdjuster.tsx 样式 */
+.window-adjuster {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: rgba(0,0,0,0.2); /* 内部区域稍暗以区分 */
+}
+
+.slider-container {
+  margin-top: 10px;
+}
+
+.slider-container:first-child {
+  margin-top: 0;
+}
+
+.slider {
+  width: 100%;
+  accent-color: var(--accent-color); /* 改变滑块颜色 */
+}
+
+.disabled-text {
+  color: #888;
+  margin-top: 20px;
+}
+
+/* NoduleList.tsx 样式 */
+.nodule-list-container {
+  margin-top: 20px;
+}
+
+.nodule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nodule-button {
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.nodule-button:hover {
+  background-color: var(--panel-bg-color);
+  border-color: var(--accent-color);
+}
+
+.nodule-button.selected {
+  background-color: var(--accent-color);
+  color: #0a192f; /* 选中时用深背景色作为文字颜色 */
+  border-color: var(--accent-color);
+  font-weight: bold;
+}
+
+/* NoduleZoom.tsx 样式 */
+.zoom-container {
+  margin-top: 20px;
+}
+
+.zoom-canvas {
+  border: 1px solid var(--border-color);
+  background-color: #000;
+  /* 放大时保持像素感，不进行模糊处理 */
+  image-rendering: pixelated; 
+}
+
+.zoom-prompt {
+  margin-top: 20px;
+  color: #888;
+}
+
+
+    src\components\ImageUploader.tsx:
+    // src/components/ImageUploader.tsx
+
+// 导入React核心模块及钩子：useRef用于获取DOM元素引用
+import React, { useRef } from 'react';
+// 导入Redux与React的连接钩子：useDispatch用于获取Redux的dispatch函数
+import { useDispatch } from 'react-redux';
+// 导入自定义上传图像的异步action：触发文件上传逻辑并更新Redux状态
+import { uploadImage } from '@store/actions';
+// 导入Redux的dispatch类型：用于类型注解，确保dispatch函数的类型正确性
+import { AppDispatch } from '@store/index';
+
+
+/**
+ * DICOM图像上传组件（核心功能组件）
+ * 提供用户交互入口，支持选择DICOM格式文件并触发上传流程
+ * 与Redux集成，通过dispatch分发action更新全局状态
+ */
+const ImageUploader: React.FC = () => {
+  // 获取Redux的dispatch函数（用于分发action到store）
+  const dispatch: AppDispatch = useDispatch();
+
+  // 使用useRef创建ref对象（用于获取文件输入框的DOM引用）
+  // 初始值为null，类型为HTMLInputElement（文件输入框的DOM类型）
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+
+  /**
+   * 文件选择事件处理函数（核心逻辑）
+   * 当用户通过文件选择框选中文件后触发
+   * @param event - React的ChangeEvent事件对象（包含文件输入框的状态）
+   */
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // 从事件对象中提取用户选中的文件（第一个文件）
+    // event.target.files 是FileList类型（可能为null），通过可选链?.[0]安全获取第一个文件
+    const file = event.target.files?.[0];
+
+    // 仅当文件存在时执行上传逻辑（避免空文件触发无效请求）
+    if (file) {
+      // 分发uploadImage异步action（触发文件上传流程）
+      // uploadImage会将文件打包为FormData发送到后端，并将返回的图像路径更新到Redux状态
+      dispatch(uploadImage(file));
+    }
+  };
+
+
+  /**
+   * 上传按钮点击处理函数（交互优化逻辑）
+   * 用于间接触发隐藏的文件输入框的点击事件（替代原生文件选择框样式）
+   */
+  const handleUploadClick = () => {
+    // 通过ref获取文件输入框的DOM实例，并调用其click()方法（打开文件选择对话框）
+    // 使用可选链?.避免ref未挂载时（如组件未渲染完成）调用click()导致的错误
+    fileInputRef.current?.click();
+  };
+
+
+  // 组件渲染的UI结构（用户实际看到的交互界面）
+  return (
+    <div>
+      {/* 隐藏的文件输入框（核心交互元素，但通过样式隐藏原生外观） */}
+      <input
+        type="file"                // 类型为文件选择框（HTML标准输入类型）
+        ref={fileInputRef}         // 关联ref对象（用于后续通过JS控制输入框行为）
+        onChange={handleFileChange}// 文件选择变化时触发的回调函数（处理文件上传）
+        style={{ display: 'none' }}// 隐藏输入框（通过自定义按钮替代原生样式，提升UI一致性）
+        accept=".dcm,.dicom"       // 指定接受的文件类型（仅DICOM格式，.dcm和.dicom扩展名）
+      />
+
+      {/* 自定义上传按钮（用户实际点击的交互入口） */}
+      <button onClick={handleUploadClick}>
+        上传CT图像
+      </button>
+
+      {/* 文件格式提示文字（辅助用户操作） */}
+      <p className="uploader-info">
+        请选择 DICOM 格式的影像文件 (.dcm, .dicom)
+      </p>
+    </div>
+  );
+};
+
+// 导出组件（供其他模块引入使用，如App组件中集成）
+export default ImageUploader;
+
+    src\components\ImageViewer.tsx:
+    import React, { useRef, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@store/index';
+
+/**
+ * 图像显示组件
+ * - 负责从Redux store中获取上传的图像数据。
+ * - 使用HTML5 Canvas将图像渲染到界面上。
+ * - 监听图像和结节数据的变化，并动态更新画布。
+ */
+const ImageViewer: React.FC = () => {
+  // 从Redux store中获取uploadedImage, nodules, 和 selectedNodule 状态
+  const { uploadedImage, nodules, selectedNodule } = useSelector((state: RootState) => state);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    // 获取Canvas的2D渲染上下文
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    if (uploadedImage) {
+      // 创建一个新的Image对象来加载上传的图像数据（通常是base64）
+      const image = new Image();
+      image.src = uploadedImage;
+      image.onload = () => {
+        // 图像加载完成后，设置canvas尺寸与图像一致
+        canvas.width = image.width;
+        canvas.height = image.height;
+        // 在canvas上绘制图像
+        context.drawImage(image, 0, 0);
+
+        // 如果有结节数据，则在图像上绘制结节框
+        if (nodules.length > 0) {
+          nodules.forEach(nodule => {
+            // 根据是否为选中结节，设置不同的颜色和线宽
+            const isSelected = selectedNodule?.id === nodule.id;
+            context.strokeStyle = isSelected ? 'blue' : 'red'; // 选中用蓝色，未选中用红色
+            context.lineWidth = isSelected ? 3 : 2; // 选中的线宽更粗
+            context.strokeRect(nodule.x, nodule.y, nodule.width, nodule.height);
+          });
+        }
+      };
+    } else {
+      // 如果没有上传的图像，则清空画布
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, [uploadedImage, nodules, selectedNodule]); // 添加 selectedNodule 作为依赖项
+
+  return (
+    <div>
+      {/* 图像渲染的画布 */}
+      <canvas
+        ref={canvasRef}
+        className="image-canvas"
+      ></canvas>
+      {/* 当没有图像时显示的提示信息 */}
+      {!uploadedImage && <p>请先上传一张CT图像</p>}
+    </div>
+  );
+};
+
+export default ImageViewer;
+
+
+    src\components\NoduleList.tsx:
+    import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@store/index';
+import { selectNodule } from '@store/actions';
+import { Nodule } from '@store/types';
+
+/**
+ * 结节列表组件
+ * - 从Redux store中获取检测到的结节列表并展示。
+ * - 允许用户点击选择某个结节。
+ * - 高亮显示当前被选中的结节。
+ */
+const NoduleList: React.FC = () => {
+  // 从Redux store中获取结节列表和当前选中的结节
+  const { nodules, selectedNodule } = useSelector((state: RootState) => state);
+  const dispatch: AppDispatch = useDispatch();
+
+  // 处理结节选择事件
+  const handleSelectNodule = (nodule: Nodule) => {
+    // dispatch 'selectNodule' action来更新store
+    dispatch(selectNodule(nodule));
+  };
+
+  // 如果没有结节数据，则显示提示信息
+  if (nodules.length === 0) {
+    return <p>尚未检测到结节。请先上传图像并运行检测。</p>;
+  }
+
+  return (
+    <div className="nodule-list-container">
+      <h4>检测到的结节列表</h4>
+      <div className="nodule-list">
+        {nodules.map(nodule => {
+          // 动态组合类名：基础类名 + 是否选中的条件类名
+          const buttonClasses = `nodule-button ${selectedNodule?.id === nodule.id ? 'selected' : ''}`;
+          
+          return (
+            <button
+              key={nodule.id}
+              onClick={() => handleSelectNodule(nodule)}
+              className={buttonClasses.trim()} // trim() 确保没有多余的空格
+            >
+              结节 #{nodule.id} - 坐标: ({nodule.x}, {nodule.y})
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default NoduleList;
+
+
+    src\components\NoduleZoom.tsx:
+    import React, { useRef, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@store/index';
+
+/**
+ * 结节放大显示组件
+ * - 监听选中的结节（selectedNodule）和上传的图像。
+ * - 当有结节被选中时，将其对应区域从原图中裁剪并放大显示。
+ */
+const NoduleZoom: React.FC = () => {
+  // 从Redux store中获取所需的状态
+  const { uploadedImage, selectedNodule } = useSelector((state: RootState) => state);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const zoomFactor = 4; // 放大倍数
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    // 如果有选中的结节和图像，则执行放大逻辑
+    if (selectedNodule && uploadedImage) {
+      const image = new Image();
+      image.src = uploadedImage;
+      image.onload = () => {
+        // 清空画布
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 定义裁剪区域的源坐标和尺寸
+        const sx = selectedNodule.x;
+        const sy = selectedNodule.y;
+        const sWidth = selectedNodule.width;
+        const sHeight = selectedNodule.height;
+
+        // 定义在目标画布上绘制的坐标和尺寸（放大效果）
+        const dx = 0;
+        const dy = 0;
+        const dWidth = sWidth * zoomFactor;
+        const dHeight = sHeight * zoomFactor;
+
+        // 设置画布尺寸以适应放大后的图像
+        canvas.width = dWidth;
+        canvas.height = dHeight;
+
+        // 从原图中裁剪并放大绘制到当前画布上
+        context.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+      };
+    } else {
+      // 如果没有选中的结节，则清空画布
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, [selectedNodule, uploadedImage]); // 依赖项：当选中结节或图像变化时更新
+
+  // 如果没有选中结节，则显示提示信息
+  if (!selectedNodule) {
+    return <p className="zoom-prompt">请在列表中选择一个结节以查看放大图像</p>;
+  }
+
+  return (
+    <div className="zoom-container">
+      <h4>结节放大镜</h4>
+      <canvas
+        ref={canvasRef}
+        className="zoom-canvas"
+      ></canvas>
+    </div>
+  );
+};
+
+export default NoduleZoom;
+
+
+    src\components\WindowAdjuster.tsx:
+    import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@store/index';
+import { adjustWindow } from '@store/actions';
+
+/**
+ * 窗宽窗位调整组件
+ * - 提供两个滑块，用于调整窗宽（WW）和窗位（WL）。
+ * - 从Redux store中读取当前的ww和wl值。
+ * - 当用户调整滑块时，更新本地状态以实时显示数值。
+ * - 当用户释放滑块时，dispatch 'adjustWindow' action来更新图像。
+ */
+const WindowAdjuster: React.FC = () => {
+  // 从Redux store中获取初始的ww和wl值
+  const { ww: initialWw, wl: initialWl, uploadedImage } = useSelector((state: RootState) => state);
+  const dispatch: AppDispatch = useDispatch();
+
+  // 使用本地state来控制滑块的实时值，避免频繁更新Redux store
+  const [ww, setWw] = useState(initialWw);
+  const [wl, setWl] = useState(initialWl);
+
+  // 当store中的初始值变化时（例如，上传新图片后），同步更新本地state
+  useEffect(() => {
+    setWw(initialWw);
+    setWl(initialWl);
+  }, [initialWw, initialWl]);
+
+  // 处理滑块数值变化
+  const handleWwChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setWw(Number(event.target.value));
+  };
+
+  const handleWlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setWl(Number(event.target.value));
+  };
+
+  // 当鼠标释放时，触发action
+  const handleMouseUp = () => {
+    // 只有当图片存在时才派发action
+    if (uploadedImage) {
+      dispatch(adjustWindow(ww, wl));
+    }
+  };
+  
+  // 如果没有上传图片，则禁用该组件
+  if (!uploadedImage) {
+    return (
+      <div className="disabled-text">
+        <p>上传图像后可调整窗宽窗位</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="window-adjuster">
+      {/* 窗宽（WW）滑块 */}
+      <div className="slider-container">
+        <label htmlFor="ww-slider">窗宽 (WW): {ww}</label>
+        <input
+          id="ww-slider"
+          type="range"
+          min="1"
+          max="4096" // 通常CT值的范围
+          value={ww}
+          onChange={handleWwChange}
+          onMouseUp={handleMouseUp}
+          className="slider"
+        />
+      </div>
+      {/* 窗位（WL）滑块 */}
+      <div className="slider-container">
+        <label htmlFor="wl-slider">窗位 (WL): {wl}</label>
+        <input
+          id="wl-slider"
+          type="range"
+          min="-2000"
+          max="2000"
+          value={wl}
+          onChange={handleWlChange}
+          onMouseUp={handleMouseUp}
+          className="slider"
+        />
+      </div>
+    </div>
+  );
+};
+
+export default WindowAdjuster;
+
+
+    src\pages\Home.tsx:
+    import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@store/index';
+import { detectNodules } from '@store/actions';
+
+import ImageUploader from '@components/ImageUploader';
+import ImageViewer from '@components/ImageViewer';
+import WindowAdjuster from '@components/WindowAdjuster';
+import NoduleList from '@components/NoduleList';
+import NoduleZoom from '@components/NoduleZoom';
+import logo from '@assets/logo.jpeg';
+
+const Home: React.FC = () => {
+  const dispatch: AppDispatch = useDispatch();
+  const { uploadedImage } = useSelector((state: RootState) => state);
+
+  // "检测结节"按钮的点击处理函数
+  const handleDetectClick = () => {
+    dispatch(detectNodules());
+  };
+
+  return (
+    <>
+      <div className="home-container">
+        <img src={logo} alt="logo" width={100} height={100} />
+        <h1>CT 肺结节检测系统</h1>
+      </div>
+
+      <div className="main-layout">
+        {/* 左侧控制面板 */}
+        <div className="card panel control-panel">
+          <h3>控制面板</h3>
+          <ImageUploader />
+          <WindowAdjuster />
+          {/* 只有上传了图片才能进行检测 */}
+          {uploadedImage && (
+            <button onClick={handleDetectClick}>
+              检测结节
+            </button>
+          )}
+        </div>
+
+        {/* 中间图像显示区域 */}
+        <div className="card panel image-panel">
+          <h3>图像显示</h3>
+          <ImageViewer />
+        </div>
+
+        {/* 右侧结节列表区域 */}
+        <div className="card panel">
+          <h3>结节详情</h3>
+          <NoduleList />
+          <NoduleZoom />
+        </div>
+      </div>
+
+      <p className="read-the-docs">
+        请上传您的 CT 影像以开始分析
+      </p>
+    </>
+  );
+}
+
+export default Home;
+
+
+    src\store\actions.ts:
+    // src/store/actions.ts
+
+// 导入依赖模块和类型定义
+import axios from 'axios';                     // 用于发起HTTP请求的库
+import { Dispatch } from 'redux';              // Redux的Dispatch类型（用于分发action）
+import { ThunkAction } from 'redux-thunk';      // Redux Thunk的异步action类型
+import {                        // 导入应用状态类型、操作类型及常量
+  AppActionTypes,
+  AppState,
+  Nodule,
+  SELECT_NODULE,
+  SET_IMAGE,
+  SET_NODULES,
+  SET_WW,
+  SET_WL
+} from './types';
+
+ 
+/**
+ * 上传图像的异步action（Thunk）
+ * 处理文件上传逻辑，并根据API响应更新应用状态
+ * @param file - 用户选择的待上传图像文件（File对象）
+ * @returns ThunkAction - 可异步执行的Redux action
+ */
+export const uploadImage =
+  (file: File): ThunkAction<void, AppState, unknown, AppActionTypes> =>
+  async (dispatch: Dispatch<AppActionTypes>) => {
+    try {
+      // 创建FormData对象，用于文件上传
+      const formData = new FormData();
+      formData.append('file', file);  // 将文件添加到formData中（键名'file'需与后端接口匹配）
+
+      // 调用后端上传接口（假设接口地址为/api/upload）
+      const response = await axios.post('/api/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',  // 文件上传需指定此Content-Type
+        },
+      });
+
+      // 上传成功：分发SET_IMAGE action，将服务器返回的图像路径存入状态
+      // 假设后端返回格式：{ image: "base64字符串或图片URL" }
+      dispatch({ type: SET_IMAGE, payload: response.data.image });
+    } catch (error) {
+      // 上传失败：打印错误日志（可扩展为分发错误提示action）
+      console.error('上传图像失败:', error);
+    }
+  };
+
+
+/**
+ * 调整窗宽窗位的异步action（Thunk）
+ * 调用后端接口调整图像显示参数，并更新应用状态
+ * @param ww - 新的窗宽值（Window Width）
+ * @param wl - 新的窗位值（Window Level）
+ * @returns ThunkAction - 可异步执行的Redux action
+ */
+export const adjustWindow =
+  (ww: number, wl: number): ThunkAction<void, AppState, unknown, AppActionTypes> =>
+  async (dispatch: Dispatch<any>, getState: () => AppState) => {
+    // 获取当前状态中的已上传图像路径（用于判断是否已上传图像）
+    const { uploadedImage } = getState();
+
+    // 仅当已上传图像时执行调整操作
+    if (uploadedImage) {
+      try {
+        // 调用后端调整窗宽窗位接口（假设接口地址为/api/adjust-window）
+        // 请求体包含当前窗宽、窗位和图像路径
+        const response = await axios.post('/api/adjust-window', { ww, wl, image: uploadedImage });
+
+        // 调整成功：
+        // 1. 分发SET_IMAGE action，更新为调整后的图像（后端可能返回处理后的新图像）
+        // 2. 分发SET_WW action，更新状态中的窗宽值
+        // 3. 分发SET_WL action，更新状态中的窗位值
+        dispatch({ type: SET_IMAGE, payload: response.data.image });
+        dispatch({ type: SET_WW, payload: ww });
+        dispatch({ type: SET_WL, payload: wl });
+      } catch (error) {
+        // 调整失败：打印错误日志
+        console.error('调整窗宽窗位失败:', error);
+      }
+    }
+  };
+
+
+/**
+ * 检测图像中病灶的异步action（Thunk）
+ * 调用后端AI检测接口，获取病灶坐标并更新状态
+ * @returns ThunkAction - 可异步执行的Redux action
+ */
+export const detectNodules =
+  (): ThunkAction<void, AppState, unknown, AppActionTypes> =>
+  async (dispatch: Dispatch<any>, getState: () => AppState) => {
+    // 获取当前状态中的已上传图像路径
+    const { uploadedImage } = getState();
+
+    // 仅当已上传图像时执行检测操作
+    if (uploadedImage) {
+      try {
+        // --- 真实后端API调用 ---
+        console.log('开始检测结节...');
+        
+        // 调用后端病灶检测接口（接口地址为/api/detect-nodules）
+        const response = await axios.post('/api/detect-nodules', { image: uploadedImage });
+
+        // 检测成功：分发SET_NODULES action，将检测到的病灶列表存入状态
+        dispatch({ type: SET_NODULES, payload: response.data.nodules });
+        console.log('结节检测完成，已更新状态。');
+      } catch (error) {
+        // 检测失败：打印错误日志
+        console.error('检测病灶失败:', error);
+      }
+    } else {
+      console.warn('请先上传图像再进行检测。');
+    }
+  };
+
+
+/**
+ * 选择病灶的同步action创建函数
+ * 用于标记当前选中的病灶（或取消选择）
+ * @param nodule - 选中的病灶对象（或null表示取消选择）
+ * @returns AppActionTypes - 包含SELECT_NODULE类型的action对象
+ */
+export const selectNodule = (nodule: Nodule | null): AppActionTypes => ({
+  type: SELECT_NODULE,  // 操作类型：选择病灶
+  payload: nodule,      // 负载数据：选中的病灶（或null）
+});
+
+    src\store\index.ts:
+    
+
+// 导入Redux核心工具函数和中间件相关模块
+import { applyMiddleware, legacy_createStore } from 'redux';  // Redux创建store和应用中间件的函数
+import { thunk, ThunkMiddleware } from 'redux-thunk';         // 用于处理异步action的Redux中间件
+import rootReducer from './reducers';                        // 应用的根reducer（状态管理核心逻辑）
+import { AppState, AppActionTypes } from './types';          // 应用状态类型和action类型定义
+
+
+/**
+ * 创建Redux store实例（全局状态容器）
+ * 负责管理应用的所有状态，并通过reducer处理状态变更
+ * 参数说明：
+ * - 第一个参数：根reducer（rootReducer），用于定义状态如何响应action变化
+ * - 第二个参数：中间件增强器（applyMiddleware），用于扩展Redux功能（此处添加thunk中间件支持异步action）
+ */
+const store = legacy_createStore(
+  rootReducer,  // 根reducer：整合所有子reducer，定义状态树的更新逻辑
+  // 应用中间件：此处使用thunk中间件，允许dispatch函数（支持异步操作）
+  applyMiddleware(thunk as ThunkMiddleware<AppState, AppActionTypes>)
+  // 类型断言说明：将thunk中间件断言为适配当前应用状态（AppState）和action类型（AppActionTypes）的中间件
+);
+
+
+/**
+ * 导出全局状态类型（RootState）
+ * 通过`ReturnType<typeof store.getState>`自动推导store的状态类型
+ * 作用：在组件或其他模块中使用时，可直接引用此类型作为状态的类型注解，避免手动定义重复类型
+ */
+export type RootState = ReturnType<typeof store.getState>;
+
+/**
+ * 导出dispatch类型（AppDispatch）
+ * 通过`typeof store.dispatch`获取store的dispatch函数类型
+ * 作用：在需要使用dispatch的地方（如组件中），可明确指定dispatch的类型，提供更好的类型提示
+ */
+export type AppDispatch = typeof store.dispatch;
+
+// 导出store实例（全局唯一的状态容器）
+// 其他模块可通过此store访问状态（store.getState()）或分发action（store.dispatch()）
+export default store;
+
+    src\store\reducers.ts:
+    import { Reducer } from 'redux'; 
+// 导入应用状态类型、操作类型集合及具体操作类型常量
+import { AppState, AppActionTypes, SELECT_NODULE, SET_IMAGE, SET_NODULES, SET_WL, SET_WW } from './types';
+
+/**
+ * 应用的初始状态
+ */
+const initialState: AppState = {
+  uploadedImage: null,       
+  ww: 1500,                  
+  wl: -600,                  
+  nodules: [],                
+  selectedNodule: null,      
+};
+
+const rootReducer: Reducer<AppState, AppActionTypes> = (state = initialState, action): AppState => {
+  switch (action.type) {
+    // 处理"设置上传图像"操作
+    case SET_IMAGE:
+      return { ...state, uploadedImage: action.payload };
+
+    // 处理"设置窗宽"操作
+    case SET_WW:
+      return { ...state, ww: action.payload };
+
+    // 处理"设置窗位"操作
+    case SET_WL:
+      return { ...state, wl: action.payload };
+
+    // 处理"设置病灶列表"操作
+    case SET_NODULES:
+      return { ...state, nodules: action.payload };
+
+    // 处理"选择病灶"操作
+    case SELECT_NODULE:
+      return { ...state, selectedNodule: action.payload };
+
+    // 未匹配到任何操作类型时（默认情况）
+    default:
+      return state;
+  }
+};
+
+export default rootReducer;
+
+    src\store\types.ts:
+    // src/store/types.ts
+
+/**
+ * 定义图像中病灶区域的结构接口
+ * 用于描述医学影像（如CT/MRI）中标记的病灶位置和尺寸信息
+ */
+export interface Nodule {
+    id: number;           // 病灶唯一标识ID（用于区分不同病灶）
+    x: number;            // 病灶区域左上角在图像中的X坐标（像素单位）
+    y: number;            // 病灶区域左上角在图像中的Y坐标（像素单位）
+    width: number;        // 病灶区域的宽度（像素单位）
+    height: number;       // 病灶区域的高度（像素单位）
+  }
+  
+  /**
+   * 定义应用的根状态结构
+   * 包含应用运行时需要全局管理的所有核心数据
+   */
+  export interface AppState {
+    uploadedImage: string | null;  // 已上传的医学影像文件路径（base64或URL，null表示未上传）
+    ww: number;                     // 窗宽（Window Width）- 用于控制图像对比度的参数
+    wl: number;                     // 窗位（Window Level）- 用于控制图像亮度的参数
+    nodules: Nodule[];              // 当前图像中所有标记的病灶区域列表
+    selectedNodule: Nodule | null;  // 当前选中的病灶（null表示未选择任何病灶）
+  }
+  
+  // 定义所有可能的Action类型常量（用于标识状态操作类型）
+  export const SET_IMAGE = 'SET_IMAGE';      // 触发"设置上传图像"操作的标识
+  export const SET_WW = 'SET_WW';            // 触发"设置窗宽"操作的标识
+  export const SET_WL = 'SET_WL';            // 触发"设置窗位"操作的标识
+  export const SET_NODULES = 'SET_NODULES';  // 触发"设置病灶列表"操作的标识
+  export const SELECT_NODULE = 'SELECT_NODULE'; // 触发"选择病灶"操作的标识
+  
+  /**
+   * 设置上传图像的Action接口
+   * 用于将上传的图像路径更新到状态中
+   */
+  interface SetImageAction {
+    type: typeof SET_IMAGE;  // 操作类型（固定为SET_IMAGE）
+    payload: string;         // 携带的数据：新的图像路径（base64字符串或URL）
+  }
+  
+  /**
+   * 设置窗宽的Action接口
+   * 用于调整图像显示的对比度参数
+   */
+  interface SetWwAction {
+    type: typeof SET_WW;     // 操作类型（固定为SET_WW）
+    payload: number;         // 携带的数据：新的窗宽数值（通常为正整数）
+  }
+  
+  /**
+   * 设置窗位的Action接口
+   * 用于调整图像显示的亮度参数
+   */
+  interface SetWlAction {
+    type: typeof SET_WL;     // 操作类型（固定为SET_WL）
+    payload: number;         // 携带的数据：新的窗位数值（通常与窗宽相关）
+  }
+  
+  /**
+   * 设置病灶列表的Action接口
+   * 用于更新图像中所有标记的病灶区域数据
+   */
+  interface SetNodulesAction {
+    type: typeof SET_NODULES;  // 操作类型（固定为SET_NODULES）
+    payload: Nodule[];         // 携带的数据：新的病灶列表数组
+  }
+  
+  /**
+   * 选择病灶的Action接口
+   * 用于标记当前用户选中的病灶区域
+   */
+  interface SelectNoduleAction {
+    type: typeof SELECT_NODULE;  // 操作类型（固定为SELECT_NODULE）
+    payload: Nodule | null;      // 携带的数据：选中的病灶对象（或null表示取消选择）
+  }
+  
+  /**
+   * 应用所有可能的Action类型集合
+   * 联合类型定义，用于Redux reducer中判断具体的操作类型
+   */
+  export type AppActionTypes =
+    | SetImageAction
+    | SetWwAction
+    | SetWlAction
+    | SetNodulesAction
+    | SelectNoduleAction;
+
+  src\App.css:
+  #root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+  background-color: var(--panel-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 12px var(--shadow-color);
+  transform: translateY(-5px);
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+
+  src\App.tsx:
+  import React from 'react';
+import Home from '@pages/Home';
+import './assets/styles.css'; // 引入全局样式文件
+import './App.css';
+
+const App: React.FC = () => {
+  return <Home />;
+}
+
+export default App;
+
+  src\assets/:
+  src\components/:
+  src\index.css:
+  :root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Tech-blue color scheme */
+  --main-bg-color: #0a192f;         /* 深海军蓝 */
+  --panel-bg-color: #1c2a4a;        /* 稍亮的面板蓝 */
+  --text-color: #ccd6f6;            /* 浅灰蓝色文本 */
+  --accent-color: #64ffda;          /* 亮青色/绿松石色 */
+  --accent-color-darker: #00bfa5;   /* 深一点的青色 */
+  --border-color: #303C55;          /* 边框颜色 */
+  --shadow-color: rgba(100, 255, 218, 0.1); /* 阴影颜色 */
+
+  color-scheme: dark;
+  color: var(--text-color);
+  background-color: var(--main-bg-color);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: var(--accent-color);
+  text-decoration: inherit;
+}
+a:hover {
+  color: var(--accent-color-darker);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--panel-bg-color);
+  border-color: var(--border-color);
+  cursor: pointer;
+  transition: all 0.25s;
+  color: var(--text-color);
+}
+button:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px var(--shadow-color);
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+
+  src\index.tsx:
+  import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Provider } from 'react-redux';
+import App from './App.tsx';
+// 导入全局样式文件：定义应用级别的样式（如重置样式、全局字体等）
+import './index.css';
+// 导入Redux store实例：管理应用的全局状态（包含状态、reducer和中间件配置）
+import store from './store';
+
+
+// 创建根DOM节点（对应HTML中id为"root"的元素，通常是<div id="root"></div>）
+// document.getElementById('root')! 中的!是TypeScript的非空断言：告诉编译器该元素一定存在（避免类型错误）
+const root = createRoot(document.getElementById('root')!);
+
+// 渲染应用到DOM
+root.render(
+  <StrictMode>
+    {/*包裹Provider组件：将Redux的store注入React组件树
+    store属性：传入之前创建的Redux store实例（所有子组件可通过useSelector/connect访问状态）*/}
+    <Provider store={store}>
+      {/* 应用根组件：所有业务组件的入口 */}
+      <App />
+    </Provider>
+  </StrictMode>,
+);
+
+  src\pages/:
+  src\router.tsx:
+  
+
+  src\store/:
+  src\vite-env.d.ts:
+  /// <reference types="vite/client" />
+
+
 .gitignore:
 # Logs
 logs
@@ -26,227 +1086,229 @@ dist-ssr
 
 
 README.md:
-# **基于 React 的 CT 肺结节检测系统前端开发文档**
+# **CT 肺结节检测系统 - 前端文档**
 
-## **1. 引言**
-本项目旨在开发一个基于 React 的前端界面，用于 CT 肺结节检测系统。系统支持用户上传 CT 图像、调整窗宽窗位、检测并标注肺结节、切换显示多个结节等功能。采用 B/S 架构，前端通过 React 实现，后端提供 API 支持图像处理和模型推理。项目使用 Vite 作为构建工具，结合 TypeScript 和 SWC 优化开发效率。
+## **1. 项目概述**
+本项目是 CT 肺结节检测系统的前端部分，基于 **React** 和 **Vite** 构建，使用 **TypeScript** 以增强代码的健壮性。前端界面旨在为用户提供一个专业、高效的医学影像分析工具，支持 CT 图像的上传、显示、分析与交互。
 
----
+核心功能包括：
+- **DICOM 图像上传**：用户可以从本地选择并上传 DICOM 格式的 CT 图像。
+- **图像渲染与交互**：在画布（Canvas）上清晰地渲染 CT 图像，并支持通过调整**窗宽（WW）**和**窗位（WL）**来优化图像的显示效果。
+- **智能结节检测**：与后端 API 集成，对上传的图像执行肺结节检测，并在图像上精确标注出检测到的结节位置。
+- **结节详情查看**：在界面侧边栏展示所有检测到的结节列表，用户可以点击列表项切换并放大查看特定结节的细节。
 
-## **2. 需求文档**
-
-### **2.1 功能需求**
-系统需实现以下核心功能：
-1. **图像上传**：支持用户上传本地 DICOM 格式的 CT 图像。
-2. **图像显示**：在界面上显示上传的 CT 图像，支持用户调整窗宽（WW）和窗位（WL）以优化显示效果。
-3. **结节检测**：对上传的图像进行肺结节检测，并在图像上标注检测结果。
-4. **结节切换与放大**：支持用户选择并切换查看多个检测到的结节，并放大显示选中的结节区域。
-
-### **2.2 非功能需求**
-- **易用性**：界面直观，操作简单。
-- **响应性**：适配不同设备和浏览器。
-- **性能**：图像加载和处理高效，窗宽窗位调整实时更新。
-- **安全性**：保护用户上传的数据，不在前端存储敏感信息。
+本项目采用前后端分离的 **B/S 架构**，前端负责用户交互和数据可视化，后端（需另外搭建）则提供图像处理、模型推理等计算密集型服务。
 
 ---
 
-## **3. 项目结构建议**
-项目基于 React，使用 React Router 管理页面，Redux 管理状态。以下是推荐的项目结构：
+## **2. 如何运行**
+
+1.  **克隆或下载项目到本地。**
+
+2.  **安装依赖：**
+    在项目根目录下打开终端，运行以下命令：
+    ```bash
+    npm install
+    ```
+
+3.  **启动开发服务器：**
+    ```bash
+    npm run dev
+    ```
+    启动后，在浏览器中打开提示的地址（通常是 `http://localhost:5173`）即可访问。
+
+---
+
+## **3. 项目结构**
+项目遵循模块化的组件设计，具备清晰、可维护的代码结构。
 
 ```
-lung-nodule-detection-frontend/
-├── public/                      # 静态资源
-│   ├── index.html              # 主 HTML 文件
-│   └── assets/                 # 静态图像、图标等
-│       └── logo.png            # 系统 Logo
-├── src/                        # 源代码
-│   ├── assets/                 # 项目样式、图片等
-│   │   └── styles.css          # 全局样式
-│   ├── components/             # 可复用组件
-│   │   ├── ImageUploader.tsx   # 图像上传组件
-│   │   ├── ImageViewer.tsx     # 图像显示组件
-│   │   ├── WindowAdjuster.tsx  # 窗宽窗位调整组件
-│   │   ├── NoduleList.tsx      # 结节列表组件
-│   │   └── NoduleZoom.tsx      # 结节放大组件
-│   ├── pages/                  # 页面级组件
-│   │   └── Home.tsx            # 主页面
-│   ├── store/                  # Redux 状态管理
-│   │   ├── actions.ts          # 定义 actions
-│   │   ├── reducers.ts         # 定义 reducers
-│   │   └── index.ts            # Redux store 配置
-│   ├── App.tsx                 # 根组件
-│   ├── index.tsx               # React 入口
-│   └── router.tsx              # React Router 配置（可选）
-├── package.json                # 项目依赖和脚本
-├── vite.config.ts              # Vite 配置
-├── tsconfig.json               # TypeScript 配置
-├── .gitignore                  # Git 忽略文件
-└── README.md                   # 项目说明
+/
+├── public/
+│   └── logo.jpeg              # 静态 Logo 文件
+├── src/
+│   ├── assets/
+│   │   └── styles.css         # 自定义组件样式
+│   ├── components/            # 可复用 UI 组件
+│   │   ├── ImageUploader.tsx  # 图像上传组件
+│   │   ├── ImageViewer.tsx    # 图像显示与标注组件
+│   │   ├── WindowAdjuster.tsx # 窗宽/窗位调整组件
+│   │   ├── NoduleList.tsx     # 结节列表组件
+│   │   └── NoduleZoom.tsx     # 结节放大显示组件
+│   ├── pages/
+│   │   └── Home.tsx           # 应用主页面，整合所有组件
+│   ├── store/                 # Redux 状态管理
+│   │   ├── actions.ts         # 定义异步 Actions
+│   │   ├── reducers.ts        # 定义 Reducers
+│   │   ├── index.ts           # Store 配置
+│   │   └── types.ts           # TypeScript 类型定义
+│   ├── App.tsx                # 应用根组件
+│   ├── index.css              # 全局样式与 CSS 变量
+│   ├── index.tsx              # React 应用入口
+│   └── main.tsx               # (如果存在，通常是入口)
+├── package.json               # 项目依赖和脚本配置
+└── vite.config.ts             # Vite 构建配置
 ```
 
 ---
 
-## **4. 组件功能说明**
+## **4. 核心组件功能**
 
-### **4.1 ImageUploader.tsx**
-- **功能**：支持用户上传 DICOM 文件并发送至后端。
-- **实现**：
-  - 使用 `<input type="file">` 捕获文件。
-  - 通过 `axios` 发送文件至后端 API（`POST /upload`）。
-  - 将返回的图像数据存入 Redux。
-- **输出**：更新 Redux 的 `uploadedImage` 状态。
-
-### **4.2 ImageViewer.tsx**
-- **功能**：显示 CT 图像并支持结节标注。
-- **实现**：
-  - 使用 `<canvas>` 渲染图像，支持动态调整显示。
-  - 根据 Redux 的 `nodules` 数据绘制结节框。
-- **依赖**：Redux 的 `uploadedImage` 和 `nodules`。
-
-### **4.3 WindowAdjuster.tsx**
-- **功能**：调整窗宽（WW）和窗位（WL）。
-- **实现**：
-  - 使用滑块（`<input type="range">`）调整 WW/WL。
-  - 调用后端 API（`POST /adjust-window`）更新图像。
-- **默认值**：WW: 1500 HU，WL: -600 HU。
-
-### **4.4 NoduleList.tsx**
-- **功能**：展示检测到的结节列表，支持选择。
-- **实现**：
-  - 使用按钮或列表展示结节。
-  - 点击后更新 Redux 的 `selectedNodule`。
-- **依赖**：Redux 的 `nodules`。
-
-### **4.5 NoduleZoom.tsx**
-- **功能**：放大显示选中的结节区域。
-- **实现**：
-  - 根据 `selectedNodule` 坐标裁剪并放大图像。
-  - 提供切换按钮更新 `selectedNodule`。
-- **依赖**：与 `NoduleList` 联动。
-
-### **4.6 Home.tsx**
-- **功能**：整合所有组件，提供整体布局。
-- **布局**：
-  - 顶部：系统名称、Logo。
-  - 左侧：工具栏（上传、调整 WW/WL、检测）。
-  - 中间：图像显示区。
-  - 右侧：结节列表和放大区。
+-   **`ImageUploader.tsx`**: 负责处理文件上传。用户通过此组件选择本地的 DICOM 文件，组件会通过 `axios` 将文件以 `multipart/form-data` 格式发送至后端 `/api/upload` 接口。
+-   **`ImageViewer.tsx`**: 系统的核心显示区域。它使用 HTML5 Canvas 渲染 CT 图像，并根据从 Redux store 中获取的结节数据，在图像上绘制矩形框以标注结节。
+-   **`WindowAdjuster.tsx`**: 提供两个滑块（Slider），允许用户实时调整窗宽和窗位，并将调整后的参数发送至后端 `/api/adjust-window` 接口，以获取最佳的图像显示效果。
+-   **`NoduleList.tsx`**: 以列表形式展示后端检测到的所有肺结节。用户点击列表中的某一项，可以触发状态更新，以便在其他组件中高亮显示该结节。
+-   **`NoduleZoom.tsx`**: 一个联动组件，当用户在 `NoduleList` 中选择一个结节后，此组件会显示该结节区域的放大视图，便于用户仔细观察。
+-   **`Home.tsx`**: 作为主页面，负责整体布局，将以上所有功能组件有机地整合在一起，构建出完整的用户界面。
 
 ---
 
-## **5. 状态管理（Redux）**
+## **5. 状态管理 (Redux)**
+项目使用 **Redux** 进行集中的状态管理，以确保数据在不同组件间的一致性和流畅传递。
 
-### **5.1 状态结构**
-```typescript
-interface State {
-  uploadedImage: string | null;  // 图像数据（base64 格式）
-  ww: number;                    // 窗宽
-  wl: number;                    // 窗位
-  nodules: Array<{ id: number; x: number; y: number; width: number; height: number }>; // 结节列表
-  selectedNodule: { id: number; x: number; y: number; width: number; height: number } | null; // 当前选中结节
-}
-```
+-   **State 结构**:
+    ```typescript
+    interface AppState {
+      uploadedImage: string | null;  // 存储后端返回的图像数据 (Base64 或 URL)
+      ww: number;                    // 当前窗宽
+      wl: number;                    // 当前窗位
+      nodules: Nodule[];             // 检测到的结节列表
+      selectedNodule: Nodule | null; // 用户当前选中的结节
+    }
+    ```
+-   **Actions**:
+    -   `uploadImage(file)`: 异步 action，调用 `/api/upload` 上传文件。
+    -   `adjustWindow(ww, wl)`: 异步 action，调用 `/api/adjust-window` 更新窗宽/窗位。
+    -   `detectNodules()`: 异步 action，调用 `/api/detect-nodules` 获取结节数据。
+    -   `selectNodule(nodule)`: 同步 action，在本地更新当前选中的结节。
 
-### **5.2 Actions**
-- **uploadImage(file: File)**：上传图像，更新 `uploadedImage`。
-- **adjustWindow(ww: number, wl: number)**：调整 WW/WL，更新图像。
-- **detectNodules()**：检测结节，更新 `nodules`。
-- **selectNodule(nodule: { id: number; x: number; y: number; width: number; height: number } | null)**：选择结节，更新 `selectedNodule`。
+---
 
-### **5.3 Reducers**
-```typescript
-import { Reducer } from 'redux';
+## **6. 样式与主题**
+项目采用了一套定制的**深蓝色科技感主题**，以符合医学影像分析的专业氛围。
 
-const initialState: State = {
-  uploadedImage: null,
-  ww: 1500,
-  wl: -600,
-  nodules: [],
-  selectedNodule: null,
-};
+-   **设计理念**:
+    -   **主背景**: 深海军蓝 (`#0a192f`)，营造沉浸、专注的视觉环境。
+    -   **面板/卡片**: 稍亮的蓝色 (`#1c2a4a`)，与背景形成层次感。
+    -   **高亮/交互色**: 明亮的青色 (`#64ffda`)，充满科技感。
+    -   **文本**: 浅灰蓝色 (`#ccd6f6`)，确保在深色背景下的可读性。
+-   **主要样式文件**:
+    -   `src/index.css`: 定义全局 CSS 变量（颜色、字体等）和基础样式。
+    -   `src/App.css`: 定义应用级的布局和容器样式。
+    -   `src/assets/styles.css`: 包含各个自定义组件的详细样式。
 
-const rootReducer: Reducer<State> = (state = initialState, action) => {
-  switch (action.type) {
-    case 'SET_IMAGE':
-      return { ...state, uploadedImage: action.payload };
-    case 'SET_WW':
-      return { ...state, ww: action.payload };
-    case 'SET_WL':
-      return { ...state, wl: action.payload };
-    case 'SET_NODULES':
-      return { ...state, nodules: action.payload };
-    case 'SELECT_NODULE':
-      return { ...state, selectedNodule: action.payload };
-    default:
-      return state;
+---
+
+## **7. 后端 API 接口**
+本项目需要后端提供以下 API 接口以保证功能完整：
+-   `POST /api/upload`: 用于上传图像文件。
+-   `POST /api/adjust-window`: 用于调整窗宽窗位。
+-   `POST /api/detect-nodules`: 用于执行结节检测。
+
+更详细的 API 设计请参阅 `api.md` 文档。
+
+api.md:
+# **CT 肺结节检测系统 - 后端 API 文档**
+
+## **1. 概述**
+本文档为 CT 肺结节检测系统前端项目提供后端 API 规范。前端应用需要以下三个核心接口来支持其功能。为了方便测试，你可以构建一个简易的后端服务来实现这些接口。
+
+- **基础 URL**: 所有 API 路由都基于服务器根路径，例如 `http://localhost:5000`。
+- **数据格式**: 所有请求和响应的主体都应为 `JSON` 格式，文件上传除外。
+
+---
+
+## **2. API 接口详解**
+
+### **2.1 图像上传接口**
+
+- **功能**:接收用户上传的 CT 图像文件，进行初步处理或存储，并返回可供前端显示的图像数据。
+- **URL**: `/api/upload`
+- **方法**: `POST`
+- **请求头**:
+  - `Content-Type`: `multipart/form-data`
+- **请求体 (Form Data)**:
+  - `file`: (File) 用户上传的图像文件。
+
+- **成功响应 (200 OK)**:
+  - **响应体 (JSON)**:
+    ```json
+    {
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..." 
+    }
+    ```
+    - `image`: 返回处理后的图像数据，推荐使用 Base64 编码的字符串，以便前端直接在 `<img>` 或 `<canvas>` 中使用。
+
+- **测试建议**: 后端收到文件后，可以将其转换为 PNG 或 JPEG 格式，然后编码为 Base64 字符串返回。
+
+---
+
+### **2.2 调整窗宽窗位接口**
+
+- **功能**: 根据前端传递的窗宽（WW）和窗位（WL）参数，调整图像的显示效果。
+- **URL**: `/api/adjust-window`
+- **方法**: `POST`
+- **请求头**:
+  - `Content-Type`: `application/json`
+- **请求体 (JSON)**:
+  ```json
+  {
+    "ww": 1500,
+    "wl": -600,
+    "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
   }
-};
+  ```
+  - `ww`: (number) 新的窗宽值。
+  - `wl`: (number) 新的窗位值。
+  - `image`: (string) 当前正在操作的图像的 Base64 数据。
 
-export default rootReducer;
-```
+- **成功响应 (200 OK)**:
+  - **响应体 (JSON)**:
+    ```json
+    {
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
+    }
+    ```
+    - `image`: 返回应用了新窗宽/窗位参数后的图像 Base64 数据。
 
-### **5.4 示例代码**
-```typescript
-// actions.ts
-import { Dispatch } from 'redux';
-import axios from 'axios';
-
-export const uploadImage = (file: File) => async (dispatch: Dispatch) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  const response = await axios.post('/api/upload', formData);
-  dispatch({ type: 'SET_IMAGE', payload: response.data.image });
-};
-
-export const adjustWindow = (ww: number, wl: number) => async (dispatch: Dispatch, getState: any) => {
-  const { uploadedImage } = getState();
-  const response = await axios.post('/api/adjust-window', { ww, wl, image: uploadedImage });
-  dispatch({ type: 'SET_IMAGE', payload: response.data.image });
-  dispatch({ type: 'SET_WW', payload: ww });
-  dispatch({ type: 'SET_WL', payload: wl });
-};
-
-export const detectNodules = () => async (dispatch: Dispatch, getState: any) => {
-  const { uploadedImage } = getState();
-  const response = await axios.post('/api/detect-nodules', { image: uploadedImage });
-  dispatch({ type: 'SET_NODULES', payload: response.data.nodules });
-};
-
-export const selectNodule = (nodule: { id: number; x: number; y: number; width: number; height: number } | null) => ({
-  type: 'SELECT_NODULE',
-  payload: nodule,
-});
-```
+- **测试建议**: 后端可以忽略传入的 `image` 数据，仅返回一张预设的、经过不同效果处理的图片 Base64，以模拟调整功能。
 
 ---
 
-## **6. 开发流程建议**
-1. **初始化项目**：运行 `npm create vite@latest . -- --template react-ts`。
-2. **安装依赖**：`npm install redux react-redux @types/react-redux redux-thunk @types/redux-thunk axios @types/axios react-router-dom @types/react-router-dom swc-loader`.
-3. **组件开发**：按上述说明逐一实现 `.tsx` 组件。
-4. **状态管理**：配置 Redux，测试 TypeScript 类型安全。
-5. **API 联调**：与后端对接，确保功能正常。
-6. **样式优化**：使用 Tailwind CSS 或 CSS 文件美化界面。
-7. **测试**：验证功能完整性和性能。
+### **2.3 肺结节检测接口**
 
----
+- **功能**: 对指定的图像进行分析，找出其中包含的肺结节，并返回它们的坐标信息。
+- **URL**: `/api/detect-nodules`
+- **方法**: `POST`
+- **请求头**:
+  - `Content-Type`: `application/json`
+- **请求体 (JSON)**:
+  ```json
+  {
+    "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
+  }
+  ```
+  - `image`: (string) 需要进行结节检测的图像的 Base64 数据。
 
-## **7. 参考资源**
-- React: https://reactjs.org/
-- Vite: https://vitejs.dev/
-- TypeScript: https://www.typescriptlang.org/
-- SWC: https://swc.rs/
-- Redux: https://redux.js.org/
-- Axios: https://axios-http.com/
-- Tailwind CSS: https://tailwindcss.com/
+- **成功响应 (200 OK)**:
+  - **响应体 (JSON)**:
+    ```json
+    {
+      "nodules": [
+        { "id": 1, "x": 150, "y": 200, "width": 20, "height": 20 },
+        { "id": 2, "x": 250, "y": 300, "width": 25, "height": 25 },
+        { "id": 3, "x": 350, "y": 150, "width": 15, "height": 15 }
+      ]
+    }
+    ```
+    - `nodules`: (Array) 一个包含多个结节对象的数组。
+      - `id`: (number) 结节的唯一标识符。
+      - `x`: (number) 结节标注框左上角的 X 坐标。
+      - `y`: (number) 结节标注框左上角的 Y 坐标。
+      - `width`: (number) 标注框的宽度。
+      - `height`: (number) 标注框的高度。
 
----
-
-## **8. 结语**
-本文档提供了基于 Vite + React + TypeScript + SWC 的 CT 肺结节检测系统前端开发的完整指南。遵循建议的项目结构和状态管理方案，可高效完成开发任务。如需进一步支持，请联系后端团队。
-
-**开发团队**：（待填写）  
-**日期**：2025 年 6 月 9 日
+- **测试建议**: 这是测试的核心。后端收到请求后，**无需进行真实的模型推理**。只需**随机生成** 2 到 5 个结节对象，其 `x`, `y`, `width`, `height` 在合理的图像范围内随机取值，然后将这个数组返回即可。这可以非常方便地模拟出检测到不同数量和位置的结节的场景。 
 
 content.py:
 import os
@@ -322,7 +1384,7 @@ index.html:
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
 
@@ -330,477 +1392,6 @@ index.html:
 node_modules/: [Dependency folder, not crawled]
 
 nodes.txt:
-.gitignore:
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-
-README.md:
-# **基于 React 的 CT 肺结节检测系统前端开发文档**
-
-## **1. 引言**
-本项目旨在开发一个基于 React 的前端界面，用于 CT 肺结节检测系统。系统支持用户上传 CT 图像、调整窗宽窗位、检测并标注肺结节、切换显示多个结节等功能。采用 B/S 架构，前端通过 React 实现，后端提供 API 支持图像处理和模型推理。项目使用 Vite 作为构建工具，结合 TypeScript 和 SWC 优化开发效率。
-
----
-
-## **2. 需求文档**
-
-### **2.1 功能需求**
-系统需实现以下核心功能：
-1. **图像上传**：支持用户上传本地 DICOM 格式的 CT 图像。
-2. **图像显示**：在界面上显示上传的 CT 图像，支持用户调整窗宽（WW）和窗位（WL）以优化显示效果。
-3. **结节检测**：对上传的图像进行肺结节检测，并在图像上标注检测结果。
-4. **结节切换与放大**：支持用户选择并切换查看多个检测到的结节，并放大显示选中的结节区域。
-
-### **2.2 非功能需求**
-- **易用性**：界面直观，操作简单。
-- **响应性**：适配不同设备和浏览器。
-- **性能**：图像加载和处理高效，窗宽窗位调整实时更新。
-- **安全性**：保护用户上传的数据，不在前端存储敏感信息。
-
----
-
-## **3. 项目结构建议**
-项目基于 React，使用 React Router 管理页面，Redux 管理状态。以下是推荐的项目结构：
-
-```
-lung-nodule-detection-frontend/
-├── public/                      # 静态资源
-│   ├── index.html              # 主 HTML 文件
-│   └── assets/                 # 静态图像、图标等
-│       └── logo.png            # 系统 Logo
-├── src/                        # 源代码
-│   ├── assets/                 # 项目样式、图片等
-│   │   └── styles.css          # 全局样式
-│   ├── components/             # 可复用组件
-│   │   ├── ImageUploader.tsx   # 图像上传组件
-│   │   ├── ImageViewer.tsx     # 图像显示组件
-│   │   ├── WindowAdjuster.tsx  # 窗宽窗位调整组件
-│   │   ├── NoduleList.tsx      # 结节列表组件
-│   │   └── NoduleZoom.tsx      # 结节放大组件
-│   ├── pages/                  # 页面级组件
-│   │   └── Home.tsx            # 主页面
-│   ├── store/                  # Redux 状态管理
-│   │   ├── actions.ts          # 定义 actions
-│   │   ├── reducers.ts         # 定义 reducers
-│   │   └── index.ts            # Redux store 配置
-│   ├── App.tsx                 # 根组件
-│   ├── index.tsx               # React 入口
-│   └── router.tsx              # React Router 配置（可选）
-├── package.json                # 项目依赖和脚本
-├── vite.config.ts              # Vite 配置
-├── tsconfig.json               # TypeScript 配置
-├── .gitignore                  # Git 忽略文件
-└── README.md                   # 项目说明
-```
-
----
-
-## **4. 组件功能说明**
-
-### **4.1 ImageUploader.tsx**
-- **功能**：支持用户上传 DICOM 文件并发送至后端。
-- **实现**：
-  - 使用 `<input type="file">` 捕获文件。
-  - 通过 `axios` 发送文件至后端 API（`POST /upload`）。
-  - 将返回的图像数据存入 Redux。
-- **输出**：更新 Redux 的 `uploadedImage` 状态。
-
-### **4.2 ImageViewer.tsx**
-- **功能**：显示 CT 图像并支持结节标注。
-- **实现**：
-  - 使用 `<canvas>` 渲染图像，支持动态调整显示。
-  - 根据 Redux 的 `nodules` 数据绘制结节框。
-- **依赖**：Redux 的 `uploadedImage` 和 `nodules`。
-
-### **4.3 WindowAdjuster.tsx**
-- **功能**：调整窗宽（WW）和窗位（WL）。
-- **实现**：
-  - 使用滑块（`<input type="range">`）调整 WW/WL。
-  - 调用后端 API（`POST /adjust-window`）更新图像。
-- **默认值**：WW: 1500 HU，WL: -600 HU。
-
-### **4.4 NoduleList.tsx**
-- **功能**：展示检测到的结节列表，支持选择。
-- **实现**：
-  - 使用按钮或列表展示结节。
-  - 点击后更新 Redux 的 `selectedNodule`。
-- **依赖**：Redux 的 `nodules`。
-
-### **4.5 NoduleZoom.tsx**
-- **功能**：放大显示选中的结节区域。
-- **实现**：
-  - 根据 `selectedNodule` 坐标裁剪并放大图像。
-  - 提供切换按钮更新 `selectedNodule`。
-- **依赖**：与 `NoduleList` 联动。
-
-### **4.6 Home.tsx**
-- **功能**：整合所有组件，提供整体布局。
-- **布局**：
-  - 顶部：系统名称、Logo。
-  - 左侧：工具栏（上传、调整 WW/WL、检测）。
-  - 中间：图像显示区。
-  - 右侧：结节列表和放大区。
-
----
-
-## **5. 状态管理（Redux）**
-
-### **5.1 状态结构**
-```typescript
-interface State {
-  uploadedImage: string | null;  // 图像数据（base64 格式）
-  ww: number;                    // 窗宽
-  wl: number;                    // 窗位
-  nodules: Array<{ id: number; x: number; y: number; width: number; height: number }>; // 结节列表
-  selectedNodule: { id: number; x: number; y: number; width: number; height: number } | null; // 当前选中结节
-}
-```
-
-### **5.2 Actions**
-- **uploadImage(file: File)**：上传图像，更新 `uploadedImage`。
-- **adjustWindow(ww: number, wl: number)**：调整 WW/WL，更新图像。
-- **detectNodules()**：检测结节，更新 `nodules`。
-- **selectNodule(nodule: { id: number; x: number; y: number; width: number; height: number } | null)**：选择结节，更新 `selectedNodule`。
-
-### **5.3 Reducers**
-```typescript
-import { Reducer } from 'redux';
-
-const initialState: State = {
-  uploadedImage: null,
-  ww: 1500,
-  wl: -600,
-  nodules: [],
-  selectedNodule: null,
-};
-
-const rootReducer: Reducer<State> = (state = initialState, action) => {
-  switch (action.type) {
-    case 'SET_IMAGE':
-      return { ...state, uploadedImage: action.payload };
-    case 'SET_WW':
-      return { ...state, ww: action.payload };
-    case 'SET_WL':
-      return { ...state, wl: action.payload };
-    case 'SET_NODULES':
-      return { ...state, nodules: action.payload };
-    case 'SELECT_NODULE':
-      return { ...state, selectedNodule: action.payload };
-    default:
-      return state;
-  }
-};
-
-export default rootReducer;
-```
-
-### **5.4 示例代码**
-```typescript
-// actions.ts
-import { Dispatch } from 'redux';
-import axios from 'axios';
-
-export const uploadImage = (file: File) => async (dispatch: Dispatch) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  const response = await axios.post('/api/upload', formData);
-  dispatch({ type: 'SET_IMAGE', payload: response.data.image });
-};
-
-export const adjustWindow = (ww: number, wl: number) => async (dispatch: Dispatch, getState: any) => {
-  const { uploadedImage } = getState();
-  const response = await axios.post('/api/adjust-window', { ww, wl, image: uploadedImage });
-  dispatch({ type: 'SET_IMAGE', payload: response.data.image });
-  dispatch({ type: 'SET_WW', payload: ww });
-  dispatch({ type: 'SET_WL', payload: wl });
-};
-
-export const detectNodules = () => async (dispatch: Dispatch, getState: any) => {
-  const { uploadedImage } = getState();
-  const response = await axios.post('/api/detect-nodules', { image: uploadedImage });
-  dispatch({ type: 'SET_NODULES', payload: response.data.nodules });
-};
-
-export const selectNodule = (nodule: { id: number; x: number; y: number; width: number; height: number } | null) => ({
-  type: 'SELECT_NODULE',
-  payload: nodule,
-});
-```
-
----
-
-## **6. 开发流程建议**
-1. **初始化项目**：运行 `npm create vite@latest . -- --template react-ts`。
-2. **安装依赖**：`npm install redux react-redux @types/react-redux redux-thunk @types/redux-thunk axios @types/axios react-router-dom @types/react-router-dom swc-loader`.
-3. **组件开发**：按上述说明逐一实现 `.tsx` 组件。
-4. **状态管理**：配置 Redux，测试 TypeScript 类型安全。
-5. **API 联调**：与后端对接，确保功能正常。
-6. **样式优化**：使用 Tailwind CSS 或 CSS 文件美化界面。
-7. **测试**：验证功能完整性和性能。
-
----
-
-## **7. 参考资源**
-- React: https://reactjs.org/
-- Vite: https://vitejs.dev/
-- TypeScript: https://www.typescriptlang.org/
-- SWC: https://swc.rs/
-- Redux: https://redux.js.org/
-- Axios: https://axios-http.com/
-- Tailwind CSS: https://tailwindcss.com/
-
----
-
-## **8. 结语**
-本文档提供了基于 Vite + React + TypeScript + SWC 的 CT 肺结节检测系统前端开发的完整指南。遵循建议的项目结构和状态管理方案，可高效完成开发任务。如需进一步支持，请联系后端团队。
-
-**开发团队**：（待填写）  
-**日期**：2025 年 6 月 9 日
-
-
-
-  public\assests/:
-  public\index.html:
-  
-
-  public\vite.svg:
-  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
-
-    src\assets\react.svg:
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
-
-    src\assets\styles.css:
-    
-
-    src\components\ImageUploader.tsx:
-    
-
-    src\components\ImageViewer.tsx:
-    
-
-    src\components\NoduleList.tsx:
-    
-
-    src\components\NoduleZoom.tsx:
-    
-
-    src\components\WindowAdjuster.tsx:
-    
-
-    src\pages\Home.tsx:
-    
-
-    src\store\actions.ts:
-    
-
-    src\store\index.ts:
-    
-
-    src\store\reducers.ts:
-    
-
-  src\App.css:
-  #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-
-  src\App.tsx:
-  import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
-
-export default App
-
-
-  src\assets/:
-  src\components/:
-  src\index.css:
-  :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-
-
-  src\index.tsx:
-  
-
-  src\main.tsx:
-  import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
-
-
-  src\pages/:
-  src\router.tsx:
-  
-
-  src\store/:
-  src\vite-env.d.ts:
-  /// <reference types="vite/client" />
 
 
 package-lock.json: [Lock file, not crawled]
@@ -822,7 +1413,8 @@ package.json:
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-redux": "^9.2.0",
-    "redux": "^5.0.1"
+    "redux": "^5.0.1",
+    "redux-thunk": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
@@ -842,6 +1434,29 @@ package.json:
 
 public/:
 src/:
+task.md:
+# 项目任务状态
+
+本项目根据 `README.md` 进行组件化开发，以下是各个组件的开发状态跟踪。
+
+| 组件/任务 | 功能 | 状态 | 备注 |
+| --- | --- | --- | --- |
+| `ImageUploader.tsx` | 图像上传组件 | ✅ 已完成 | 负责上传 DICOM 图像文件。 |
+| `ImageViewer.tsx` | 图像显示组件 | ✅ 已完成 | 负责显示 CT 图像及标注的结节。 |
+| `WindowAdjuster.tsx` | 窗宽窗位调整组件 | ✅ 已完成 | 负责调整图像的窗宽和窗位。 |
+| `NoduleList.tsx` | 结节列表组件 | ✅ 已完成 | 负责展示检测到的结节列表。 |
+| `NoduleZoom.tsx` | 结节放大组件 | ✅ 已完成 | 负责放大显示选中的结节。 |
+| `Home.tsx` | 主页面 | ✅ 已完成 | 整合所有组件，提供整体布局。 |
+| `Redux` 状态管理 | - | ✅ 已完成 | 已搭建基本的 Redux 环境。 |
+| **代码重构** | **将 App.tsx 逻辑迁移到 Home.tsx** | ✅ 已完成 | **提升项目结构清晰度。** |
+| **样式优化** | **将内联样式提取到 CSS 文件** | ✅ 已完成 | **提高代码可维护性。** |
+
+---
+**图例:**
+- ✅ 已完成
+- ⏳ 进行中
+- ⬜️ 未开始 
+
 tsconfig.json:
 {
   "compilerOptions": {
@@ -872,7 +1487,7 @@ tsconfig.json:
 }    
 
 tsconfig.tsbuildinfo:
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts"],"version":"5.8.3"}
+{"root":["./src/app.tsx","./src/index.tsx","./src/router.tsx","./src/vite-env.d.ts","./src/components/imageuploader.tsx","./src/components/imageviewer.tsx","./src/components/nodulelist.tsx","./src/components/nodulezoom.tsx","./src/components/windowadjuster.tsx","./src/pages/home.tsx","./src/store/actions.ts","./src/store/index.ts","./src/store/reducers.ts","./src/store/types.ts"],"version":"5.8.3"}
 
 vite.config.ts:
 // vite.config.ts（修改后）

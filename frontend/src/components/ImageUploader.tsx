@@ -72,13 +72,7 @@ const ImageUploader: React.FC = () => {
       </button>
 
       {/* 文件格式提示文字（辅助用户操作） */}
-      <p
-        style={{
-          fontSize: '0.8rem',       // 字体大小（较小的辅助文字，不干扰主操作）
-          color: '#888',            // 灰色文字（视觉上区分于主内容）
-          marginTop: '10px'         // 顶部边距（与按钮保持适当间距，提升排版美观度）
-        }}
-      >
+      <p className="uploader-info">
         请选择 DICOM 格式的影像文件 (.dcm, .dicom)
       </p>
     </div>

@@ -96,17 +96,21 @@ export const detectNodules =
     // 仅当已上传图像时执行检测操作
     if (uploadedImage) {
       try {
-        // 调用后端病灶检测接口（假设接口地址为/api/detect-nodules）
-        // 请求体包含当前图像路径
+        // --- 真实后端API调用 ---
+        console.log('开始检测结节...');
+        
+        // 调用后端病灶检测接口（接口地址为/api/detect-nodules）
         const response = await axios.post('/api/detect-nodules', { image: uploadedImage });
 
         // 检测成功：分发SET_NODULES action，将检测到的病灶列表存入状态
-        // 假设后端返回格式：{ nodules: Nodule[] }（需符合Nodule接口定义）
         dispatch({ type: SET_NODULES, payload: response.data.nodules });
+        console.log('结节检测完成，已更新状态。');
       } catch (error) {
         // 检测失败：打印错误日志
         console.error('检测病灶失败:', error);
       }
+    } else {
+      console.warn('请先上传图像再进行检测。');
     }
   };
 

@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts"],"version":"5.8.3"}
+{"root":["./src/app.tsx","./src/index.tsx","./src/router.tsx","./src/vite-env.d.ts","./src/components/imageuploader.tsx","./src/components/imageviewer.tsx","./src/components/nodulelist.tsx","./src/components/nodulezoom.tsx","./src/components/windowadjuster.tsx","./src/pages/home.tsx","./src/store/actions.ts","./src/store/index.ts","./src/store/reducers.ts","./src/store/types.ts"],"version":"5.8.3"}
