@@ -1,0 +1,263 @@
+api.md:
+# **CT 肺结节检测系统 - 后端 API 文档**
+
+## **1. 概述**
+本文档为 CT 肺结节检测系统前端项目提供后端 API 规范。前端应用的核心功能依赖以下接口。
+
+- **基础 URL**: 所有 API 路由都基于服务器根路径，例如 `http://localhost:5000`。
+- **数据格式**: 所有请求和响应的主体都应为 `JSON` 格式，文件上传除外。
+
+---
+
+## **2. API 接口详解**
+
+### **2.1 肺结节检测接口**
+
+- **功能**: 接收前端上传的**单个 CT 图像文件**，对其进行分析，找出其中包含的肺结节，并返回它们的坐标信息。
+- **URL**: `/api/detect-nodules`
+- **方法**: `POST`
+- **请求头**:
+  - `Content-Type`: `multipart/form-data`
+- **请求体 (Form Data)**:
+  - `file`: (File) 用户选择的需要进行结节检测的图像文件。前端每次只会对**一张活动图像**发起检测请求。
+
+- **成功响应 (200 OK)**:
+  - **响应体 (JSON)**:
+    ```json
+    {
+      "nodules": [
+        { "id": 1, "x": 150, "y": 200, "width": 20, "height": 20 },
+        { "id": 2, "x": 250, "y": 300, "width": 25, "height": 25 }
+      ]
+    }
+    ```
+    - `nodules`: (Array) 一个包含多个结节对象的数组。
+      - `id`: (number) 结节的唯一标识符。
+      - `x`: (number) 结节标注框左上角的 X 坐标。
+      - `y`: (number) 结节标注框左上角的 Y 坐标。
+      - `width`: (number) 标注框的宽度。
+      - `height`: (number) 标注框的高度。
+
+- **测试建议**: 这是测试的核心。后端收到文件后，**无需进行真实的模型推理**。只需**随机生成** 2 到 5 个结节对象，其 `x`, `y`, `width`, `height` 在合理的图像范围内随机取值，然后将这个数组返回即可。这可以非常方便地模拟出检测到不同数量和位置的结节的场景。
+
+---
+
+### **2.2 ~~图像上传接口~~ (已废弃)**
+
+- **功能描述**: 原 `/api/upload` 接口已**废弃**。
+- **原因**: 新的前端逻辑支持一次性上传多张图片，并在**客户端本地**直接生成预览图（使用 `FileReader` API 将图片转换为 Base64）。因此，不再需要一个独立的上传接口来返回处理后的图像数据。结节检测时，图像文件会直接通过 `/api/detect-nodules` 接口发送。
+
+---
+
+### **2.3 ~~调整窗宽窗位接口~~ (已废弃)**
+
+- **功能描述**: 原 `/api/adjust-window` 接口已**废弃**。
+- **原因**: 窗宽窗位（WW/WL）的调整目前仅在前端处理，不涉及后端请求。如果未来需要后端进行图像处理，则需要重新设计此接口。 
+
+data.md:
+# CT肺结节检测系统 - 数据格式文档
+
+本文件详细说明前端内部使用的核心数据结构，便于团队成员理解和开发。关于前后端接口的详细规范，请参考 `api.md`。
+
+---
+
+## 1. 前端全局状态（AppState）数据结构
+
+前端使用 Redux 集中管理应用状态，以支持多图像上传和独立分析。核心结构如下：
+
+```typescript
+// 定义单个结节的数据结构
+interface Nodule {
+  id: number;     // 结节唯一ID
+  x: number;      // 左上角X坐标
+  y: number;      // 左上角Y坐标
+  width: number;  // 宽度
+  height: number; // 高度
+}
+
+// 定义单个上传图像文件的数据结构
+interface ImageFile {
+  id: string;          // 基于时间戳和文件名的唯一ID
+  file: File;          // 原始文件对象，用于发送到后端
+  imageUrl: string;    // 在客户端生成的Base64或Object URL，用于本地预览
+  nodules: Nodule[];   // 与此图像关联的结节列表
+}
+
+// 定义应用的主状态树
+interface AppState {
+  images: ImageFile[];          // 所有已上传图像的列表
+  activeImageId: string | null; // 当前被选中用于显示和分析的图像ID
+  ww: number;                   // 图像显示的窗宽（全局设置）
+  wl: number;                   // 图像显示的窗位（全局设置）
+  selectedNodule: Nodule | null;// 在活动图像上选中的结节
+  showNodules: boolean;         // 是否在活动图像上显示结节标注
+}
+```
+
+---
+
+## 2. 典型数据流示例
+
+新的工作流程支持多图像处理：
+
+1.  **用户上传一张或多张图像**:
+    - 前端 `ImageUploader` 组件接收文件。
+    - `uploadImages` action 被调用。
+    - 前端使用 `FileReader` 将每个文件转换为 Base64 `imageUrl` 用于本地预览。
+    - 为每个文件创建一个 `ImageFile` 对象（包含唯一 `id`, `File` 对象, `imageUrl` 和一个空的 `nodules` 数组）。
+    - 这些 `ImageFile` 对象被添加到 Redux store 的 `images` 数组中。
+    - 默认第一张上传的图片被设为活动图片（`activeImageId` 被设置）。
+
+2.  **用户点击缩略图切换图像**:
+    - `ThumbnailList` 组件捕获点击事件。
+    - `setActiveImage` action 被调用，并传入被点击图像的 `id`。
+    - Redux store 更新 `activeImageId`。
+    - `ImageViewer` 和 `NoduleList` 组件监听到 `activeImageId` 的变化，并重新渲染以显示新活动图像及其关联的结节。
+
+3.  **用户对当前活动图像发起结节检测**:
+    - 用户点击"开始预测"按钮。
+    - `detectNodules` action 被调用。
+    - 该 action 从 Redux store 中找到 `activeImageId` 对应的 `ImageFile` 对象。
+    - 从该对象中提取原始的 `File` 对象 (`imageFile.file`)。
+    - 将此文件通过 `FormData` 发送到后端的 `/api/detect-nodules` 接口。
+    - 后端返回检测到的 `nodules` 数组。
+    - 前端调用 `setNodulesForImage` action，将返回的结节列表更新到 `activeImageId` 对应的那个 `ImageFile` 对象的 `nodules` 字段中。
+
+---
+
+## 3. 约定与注意事项
+- 前后端接口的请求和响应格式，请严格遵循 `api.md` 文档。
+- 结节坐标和尺寸均为像素单位，基于图像的原始分辨率。
+- 所有与特定图像相关的数据（如结节列表）都存储在各自的 `ImageFile` 对象中，实现了数据隔离。
+
+---
+
+如需扩展数据结构，请在本文件补充说明，并同步更新前端 `src/store/types.ts`。 
+
+readme.md:
+# **CT 肺结节检测系统 - 前端文档**
+
+## **1. 项目概述**
+本项目是 CT 肺结节检测系统的前端部分，基于 **React** 和 **Vite** 构建，使用 **TypeScript** 以增强代码的健壮性。前端界面旨在为用户提供一个专业、高效的医学影像分析工具，支持 CT 图像的上传、显示、分析与交互。
+
+核心功能包括：
+- **多图像上传与管理**：用户可以一次性从本地选择并上传**多张**图像（支持 DICOM, PNG, JPG 等格式）。
+- **缩略图导航**：上传的图像会以缩略图形式在侧边栏展示，用户可以方便地点击切换当前需要分析的图像。
+- **按需智能结节检测**：用户选择一张图像后，可点击"开始预测"按钮。前端将**仅针对当前选中的图像**调用后端 API 执行肺结节检测，并将结果精确标注在图像上。
+- **图像渲染与交互**：在画布（Canvas）上清晰地渲染 CT 图像，并支持通过调整**窗宽（WW）**和**窗位（WL）**来优化图像的显示效果。
+- **结节详情查看**：在界面侧边栏展示当前图像检测到的结节列表，用户可以点击列表项高亮显示特定结节。
+
+本项目采用前后端分离的 **B/S 架构**，前端负责用户交互和数据可视化，后端（需另外搭建）则提供模型推理等计算密集型服务。
+
+---
+
+## **2. 如何运行**
+
+1.  **克隆或下载项目到本地。**
+
+2.  **安装依赖：**
+    在项目根目录下打开终端，运行以下命令：
+    ```bash
+    npm install
+    ```
+
+3.  **启动开发服务器：**
+    ```bash
+    npm run dev
+    ```
+    启动后，在浏览器中打开提示的地址（通常是 `http://localhost:3000`）即可访问。
+
+---
+
+## **3. 项目结构**
+项目遵循模块化的组件设计，具备清晰、可维护的代码结构。
+
+```
+/
+├── public/
+│   └── logo.jpeg
+├── src/
+│   ├── assets/
+│   ├── components/            # 可复用 UI 组件
+│   │   ├── ImageUploader.tsx  # 多图像上传组件
+│   │   ├── ThumbnailList.tsx  # 图像缩略图列表组件
+│   │   ├── ImageViewer.tsx    # 图像显示与标注组件
+│   │   ├── WindowAdjuster.tsx # 窗宽/窗位调整组件
+│   │   ├── NoduleList.tsx     # 结节列表组件
+│   │   └── NoduleZoom.tsx     # 结节放大显示组件
+│   ├── pages/
+│   │   └── Workspace.tsx      # 应用主工作区页面，整合所有组件
+│   ├── store/                 # Redux 状态管理
+│   │   ├── actions.ts
+│   │   ├── reducers.ts
+│   │   ├── index.ts
+│   │   └── types.ts
+│   ├── App.tsx
+│   ├── index.css
+│   └── index.tsx
+├── package.json
+└── vite.config.ts
+```
+
+---
+
+## **4. 核心组件功能**
+
+-   **`ImageUploader.tsx`**: 负责处理多文件上传。用户通过此组件选择本地的一个或多个图像文件。
+-   **`ThumbnailList.tsx`**: 显示所有已上传图像的缩略图。用户点击缩略图可以切换**活动图像**。
+-   **`ImageViewer.tsx`**: 系统的核心显示区域。它使用 HTML5 Canvas 渲染当前**活动图像**，并根据 Redux store 中该图像关联的结节数据，绘制矩形框进行标注。
+-   **`WindowAdjuster.tsx`**: 提供滑块让用户调整窗宽和窗位，这些参数目前在前端全局生效，用于调整图像显示。
+-   **`NoduleList.tsx`**: 以列表形式展示当前**活动图像**检测到的所有肺结节。
+-   **`NoduleZoom.tsx`**: 一个联动组件，当用户在 `NoduleList` 中选择一个结节后，此组件未来可以显示该结节区域的放大视图。
+-   **`Workspace.tsx`**: 作为主页面，负责整体三栏式布局，将以上所有功能组件有机地整合在一起，构建出完整的用户界面。
+
+---
+
+## **5. 状态管理 (Redux)**
+项目使用 **Redux** 进行集中的状态管理，以支持多图像工作流。
+
+-   **State 结构**:
+    ```typescript
+    interface AppState {
+      images: ImageFile[];          // 存储所有上传的图像对象
+      activeImageId: string | null; // 当前活动图像的ID
+      ww: number;                   // 窗宽
+      wl: number;                   // 窗位
+      selectedNodule: Nodule | null;// 当前选中的结节
+      showNodules: boolean;         // 是否显示结节
+    }
+    
+    interface ImageFile {
+      id: string;      // 唯一ID
+      file: File;      // 原始文件
+      imageUrl: string;// 本地预览URL
+      nodules: Nodule[];// 关联的结节列表
+    }
+    ```
+-   **核心 Actions**:
+    -   `uploadImages(files)`: 异步 action，在本地处理多文件上传并更新状态。
+    -   `setActiveImage(imageId)`: 同步 action，设置当前活动的图像。
+    -   `detectNodules()`: 异步 action，将**当前活动图像**的文件发送到 `/api/detect-nodules` 并获取结节数据。
+    -   `selectNodule(nodule)`: 同步 action，在本地更新当前选中的结节。
+
+---
+
+## **6. 样式与主题**
+项目采用了一套定制的**深蓝色科技感主题**，以符合医学影像分析的专业氛围。
+
+-   **设计理念**:
+    -   **主背景**: 深海军蓝 (`#0a192f`)。
+    -   **面板/卡片**: 稍亮的蓝色 (`#1c2a4a`)。
+    -   **高亮/交互色**: 明亮的青色 (`#64ffda`)。
+    -   **文本**: 浅灰蓝色 (`#ccd6f6`)。
+-   **主要样式文件**:
+    -   `src/index.css`: 定义全局 CSS 变量。
+    -   `src/App.css`: 定义应用级的布局样式。
+
+---
+
+## **7. 后端 API 接口**
+本项目需要后端提供以下 API 接口以保证功能完整：
+-   `POST /api/detect-nodules`: 用于对单个图像文件执行结节检测。
+
+更详细的 API 设计请参阅 `api.md` 文档。

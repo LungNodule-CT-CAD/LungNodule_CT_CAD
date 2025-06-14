@@ -33,10 +33,12 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  /* 使应用在横向上占满可视区域，避免左右留白 */
+  width: 100vw;
   min-width: 320px;
   min-height: 100vh;
+  /* 允许子元素自行决定布局，无需整体居中 */
+  display: block;
 }
 
 h1 {
@@ -64,4 +66,22 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* 让 React 根节点宽度 100% ，避免父级更改导致的水平留白 */
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden; /* 禁止全局滚动 */
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
 }

@@ -5,7 +5,7 @@ import React, { useRef } from 'react';
 // 导入Redux与React的连接钩子：useDispatch用于获取Redux的dispatch函数
 import { useDispatch } from 'react-redux';
 // 导入自定义上传图像的异步action：触发文件上传逻辑并更新Redux状态
-import { uploadImage } from '@store/actions';
+import { uploadImages } from '@store/actions';
 // 导入Redux的dispatch类型：用于类型注解，确保dispatch函数的类型正确性
 import { AppDispatch } from '@store/index';
 
@@ -30,15 +30,14 @@ const ImageUploader: React.FC = () => {
    * @param event - React的ChangeEvent事件对象（包含文件输入框的状态）
    */
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // 从事件对象中提取用户选中的文件（第一个文件）
-    // event.target.files 是FileList类型（可能为null），通过可选链?.[0]安全获取第一个文件
-    const file = event.target.files?.[0];
-
-    // 仅当文件存在时执行上传逻辑（避免空文件触发无效请求）
-    if (file) {
-      // 分发uploadImage异步action（触发文件上传流程）
-      // uploadImage会将文件打包为FormData发送到后端，并将返回的图像路径更新到Redux状态
-      dispatch(uploadImage(file));
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      // 将FileList转换为File[]
+      dispatch(uploadImages(Array.from(files)));
+    }
+    // 清空input的值，确保下次选择相同文件时仍然触发onChange
+    if(fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -63,12 +62,13 @@ const ImageUploader: React.FC = () => {
         ref={fileInputRef}         // 关联ref对象（用于后续通过JS控制输入框行为）
         onChange={handleFileChange}// 文件选择变化时触发的回调函数（处理文件上传）
         style={{ display: 'none' }}// 隐藏输入框（通过自定义按钮替代原生样式，提升UI一致性）
-        accept=".dcm,.dicom"       // 指定接受的文件类型（仅DICOM格式，.dcm和.dicom扩展名）
+        accept=".dcm,.dicom,.jpg,.png" // 接受更多图片格式
+        multiple // 允许选择多个文件
       />
 
       {/* 自定义上传按钮（用户实际点击的交互入口） */}
-      <button onClick={handleUploadClick}>
-        上传CT图像
+      <button onClick={handleUploadClick} style={{ width: '100%', padding: '6px 0', fontSize: '0.9rem' }}>
+        上传图像
       </button>
 
       {/* 文件格式提示文字（辅助用户操作） */}

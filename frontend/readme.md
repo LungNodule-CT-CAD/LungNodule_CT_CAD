@@ -4,12 +4,13 @@
 本项目是 CT 肺结节检测系统的前端部分，基于 **React** 和 **Vite** 构建，使用 **TypeScript** 以增强代码的健壮性。前端界面旨在为用户提供一个专业、高效的医学影像分析工具，支持 CT 图像的上传、显示、分析与交互。
 
 核心功能包括：
-- **DICOM 图像上传**：用户可以从本地选择并上传 DICOM 格式的 CT 图像。
+- **多图像上传与管理**：用户可以一次性从本地选择并上传**多张**图像（支持 DICOM, PNG, JPG 等格式）。
+- **缩略图导航**：上传的图像会以缩略图形式在侧边栏展示，用户可以方便地点击切换当前需要分析的图像。
+- **按需智能结节检测**：用户选择一张图像后，可点击"开始预测"按钮。前端将**仅针对当前选中的图像**调用后端 API 执行肺结节检测，并将结果精确标注在图像上。
 - **图像渲染与交互**：在画布（Canvas）上清晰地渲染 CT 图像，并支持通过调整**窗宽（WW）**和**窗位（WL）**来优化图像的显示效果。
-- **智能结节检测**：与后端 API 集成，对上传的图像执行肺结节检测，并在图像上精确标注出检测到的结节位置。
-- **结节详情查看**：在界面侧边栏展示所有检测到的结节列表，用户可以点击列表项切换并放大查看特定结节的细节。
+- **结节详情查看**：在界面侧边栏展示当前图像检测到的结节列表，用户可以点击列表项高亮显示特定结节。
 
-本项目采用前后端分离的 **B/S 架构**，前端负责用户交互和数据可视化，后端（需另外搭建）则提供图像处理、模型推理等计算密集型服务。
+本项目采用前后端分离的 **B/S 架构**，前端负责用户交互和数据可视化，后端（需另外搭建）则提供模型推理等计算密集型服务。
 
 ---
 
@@ -27,7 +28,7 @@
     ```bash
     npm run dev
     ```
-    启动后，在浏览器中打开提示的地址（通常是 `http://localhost:5173`）即可访问。
+    启动后，在浏览器中打开提示的地址（通常是 `http://localhost:3000`）即可访问。
 
 ---
 
@@ -37,61 +38,69 @@
 ```
 /
 ├── public/
-│   └── logo.jpeg              # 静态 Logo 文件
+│   └── logo.jpeg
 ├── src/
 │   ├── assets/
-│   │   └── styles.css         # 自定义组件样式
 │   ├── components/            # 可复用 UI 组件
-│   │   ├── ImageUploader.tsx  # 图像上传组件
+│   │   ├── ImageUploader.tsx  # 多图像上传组件
+│   │   ├── ThumbnailList.tsx  # 图像缩略图列表组件
 │   │   ├── ImageViewer.tsx    # 图像显示与标注组件
 │   │   ├── WindowAdjuster.tsx # 窗宽/窗位调整组件
 │   │   ├── NoduleList.tsx     # 结节列表组件
 │   │   └── NoduleZoom.tsx     # 结节放大显示组件
 │   ├── pages/
-│   │   └── Home.tsx           # 应用主页面，整合所有组件
+│   │   └── Workspace.tsx      # 应用主工作区页面，整合所有组件
 │   ├── store/                 # Redux 状态管理
-│   │   ├── actions.ts         # 定义异步 Actions
-│   │   ├── reducers.ts        # 定义 Reducers
-│   │   ├── index.ts           # Store 配置
-│   │   └── types.ts           # TypeScript 类型定义
-│   ├── App.tsx                # 应用根组件
-│   ├── index.css              # 全局样式与 CSS 变量
-│   ├── index.tsx              # React 应用入口
-│   └── main.tsx               # (如果存在，通常是入口)
-├── package.json               # 项目依赖和脚本配置
-└── vite.config.ts             # Vite 构建配置
+│   │   ├── actions.ts
+│   │   ├── reducers.ts
+│   │   ├── index.ts
+│   │   └── types.ts
+│   ├── App.tsx
+│   ├── index.css
+│   └── index.tsx
+├── package.json
+└── vite.config.ts
 ```
 
 ---
 
 ## **4. 核心组件功能**
 
--   **`ImageUploader.tsx`**: 负责处理文件上传。用户通过此组件选择本地的 DICOM 文件，组件会通过 `axios` 将文件以 `multipart/form-data` 格式发送至后端 `/api/upload` 接口。
--   **`ImageViewer.tsx`**: 系统的核心显示区域。它使用 HTML5 Canvas 渲染 CT 图像，并根据从 Redux store 中获取的结节数据，在图像上绘制矩形框以标注结节。
--   **`WindowAdjuster.tsx`**: 提供两个滑块（Slider），允许用户实时调整窗宽和窗位，并将调整后的参数发送至后端 `/api/adjust-window` 接口，以获取最佳的图像显示效果。
--   **`NoduleList.tsx`**: 以列表形式展示后端检测到的所有肺结节。用户点击列表中的某一项，可以触发状态更新，以便在其他组件中高亮显示该结节。
--   **`NoduleZoom.tsx`**: 一个联动组件，当用户在 `NoduleList` 中选择一个结节后，此组件会显示该结节区域的放大视图，便于用户仔细观察。
--   **`Home.tsx`**: 作为主页面，负责整体布局，将以上所有功能组件有机地整合在一起，构建出完整的用户界面。
+-   **`ImageUploader.tsx`**: 负责处理多文件上传。用户通过此组件选择本地的一个或多个图像文件。
+-   **`ThumbnailList.tsx`**: 显示所有已上传图像的缩略图。用户点击缩略图可以切换**活动图像**。
+-   **`ImageViewer.tsx`**: 系统的核心显示区域。它使用 HTML5 Canvas 渲染当前**活动图像**，并根据 Redux store 中该图像关联的结节数据，绘制矩形框进行标注。
+-   **`WindowAdjuster.tsx`**: 提供滑块让用户调整窗宽和窗位，这些参数目前在前端全局生效，用于调整图像显示。
+-   **`NoduleList.tsx`**: 以列表形式展示当前**活动图像**检测到的所有肺结节。
+-   **`NoduleZoom.tsx`**: 一个联动组件，当用户在 `NoduleList` 中选择一个结节后，此组件未来可以显示该结节区域的放大视图。
+-   **`Workspace.tsx`**: 作为主页面，负责整体三栏式布局，将以上所有功能组件有机地整合在一起，构建出完整的用户界面。
 
 ---
 
 ## **5. 状态管理 (Redux)**
-项目使用 **Redux** 进行集中的状态管理，以确保数据在不同组件间的一致性和流畅传递。
+项目使用 **Redux** 进行集中的状态管理，以支持多图像工作流。
 
 -   **State 结构**:
     ```typescript
     interface AppState {
-      uploadedImage: string | null;  // 存储后端返回的图像数据 (Base64 或 URL)
-      ww: number;                    // 当前窗宽
-      wl: number;                    // 当前窗位
-      nodules: Nodule[];             // 检测到的结节列表
-      selectedNodule: Nodule | null; // 用户当前选中的结节
+      images: ImageFile[];          // 存储所有上传的图像对象
+      activeImageId: string | null; // 当前活动图像的ID
+      ww: number;                   // 窗宽
+      wl: number;                   // 窗位
+      selectedNodule: Nodule | null;// 当前选中的结节
+      showNodules: boolean;         // 是否显示结节
+    }
+    
+    interface ImageFile {
+      id: string;      // 唯一ID
+      file: File;      // 原始文件
+      imageUrl: string;// 本地预览URL
+      nodules: Nodule[];// 关联的结节列表
     }
     ```
--   **Actions**:
-    -   `uploadImage(file)`: 异步 action，调用 `/api/upload` 上传文件。
-    -   `adjustWindow(ww, wl)`: 异步 action，调用 `/api/adjust-window` 更新窗宽/窗位。
-    -   `detectNodules()`: 异步 action，调用 `/api/detect-nodules` 获取结节数据。
+-   **核心 Actions**:
+    -   `uploadImages(files)`: 异步 action，在本地处理多文件上传并更新状态。
+    -   `setActiveImage(imageId)`: 同步 action，设置当前活动的图像。
+    -   `detectNodules()`: 异步 action，将**当前活动图像**的文件发送到 `/api/detect-nodules` 并获取结节数据。
     -   `selectNodule(nodule)`: 同步 action，在本地更新当前选中的结节。
 
 ---
@@ -100,21 +109,18 @@
 项目采用了一套定制的**深蓝色科技感主题**，以符合医学影像分析的专业氛围。
 
 -   **设计理念**:
-    -   **主背景**: 深海军蓝 (`#0a192f`)，营造沉浸、专注的视觉环境。
-    -   **面板/卡片**: 稍亮的蓝色 (`#1c2a4a`)，与背景形成层次感。
-    -   **高亮/交互色**: 明亮的青色 (`#64ffda`)，充满科技感。
-    -   **文本**: 浅灰蓝色 (`#ccd6f6`)，确保在深色背景下的可读性。
+    -   **主背景**: 深海军蓝 (`#0a192f`)。
+    -   **面板/卡片**: 稍亮的蓝色 (`#1c2a4a`)。
+    -   **高亮/交互色**: 明亮的青色 (`#64ffda`)。
+    -   **文本**: 浅灰蓝色 (`#ccd6f6`)。
 -   **主要样式文件**:
-    -   `src/index.css`: 定义全局 CSS 变量（颜色、字体等）和基础样式。
-    -   `src/App.css`: 定义应用级的布局和容器样式。
-    -   `src/assets/styles.css`: 包含各个自定义组件的详细样式。
+    -   `src/index.css`: 定义全局 CSS 变量。
+    -   `src/App.css`: 定义应用级的布局样式。
 
 ---
 
 ## **7. 后端 API 接口**
 本项目需要后端提供以下 API 接口以保证功能完整：
--   `POST /api/upload`: 用于上传图像文件。
--   `POST /api/adjust-window`: 用于调整窗宽窗位。
--   `POST /api/detect-nodules`: 用于执行结节检测。
+-   `POST /api/detect-nodules`: 用于对单个图像文件执行结节检测。
 
 更详细的 API 设计请参阅 `api.md` 文档。

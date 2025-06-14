@@ -8,120 +8,121 @@ import {                        // 导入应用状态类型、操作类型及常
   AppActionTypes,
   AppState,
   Nodule,
+  ImageFile,
+  ADD_IMAGES,
+  SET_ACTIVE_IMAGE,
+  SET_NODULES_FOR_IMAGE,
   SELECT_NODULE,
-  SET_IMAGE,
-  SET_NODULES,
+  SET_SHOW_NODULES,
   SET_WW,
-  SET_WL
+  SET_WL,
 } from './types';
+import cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
 
- 
 /**
- * 上传图像的异步action（Thunk）
- * 处理文件上传逻辑，并根据API响应更新应用状态
- * @param file - 用户选择的待上传图像文件（File对象）
- * @returns ThunkAction - 可异步执行的Redux action
+ * 上传多个图像文件的Thunk Action
+ * @param files - 用户选择的File对象数组
  */
-export const uploadImage =
-  (file: File): ThunkAction<void, AppState, unknown, AppActionTypes> =>
+export const uploadImages =
+  (files: File[]): ThunkAction<void, AppState, unknown, AppActionTypes> =>
   async (dispatch: Dispatch<AppActionTypes>) => {
-    try {
-      // 创建FormData对象，用于文件上传
-      const formData = new FormData();
-      formData.append('file', file);  // 将文件添加到formData中（键名'file'需与后端接口匹配）
+    const imageFiles: ImageFile[] = files.map(file => {
+      const isDicom = file.type === 'application/dicom' || file.name.toLowerCase().endsWith('.dcm');
+      let imageUrl;
 
-      // 调用后端上传接口（假设接口地址为/api/upload）
-      const response = await axios.post('/api/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',  // 文件上传需指定此Content-Type
-        },
-      });
+      if (isDicom) {
+        // 对于DICOM文件，使用Cornerstone的加载器生成一个唯一的imageId
+        imageUrl = cornerstoneWADOImageLoader.wadouri.fileManager.add(file);
+      } else {
+        // 对于常规图像（PNG, JPG），创建一个浏览器可以原生显示的对象URL
+        imageUrl = URL.createObjectURL(file);
+      }
 
-      // 上传成功：分发SET_IMAGE action，将服务器返回的图像路径存入状态
-      // 假设后端返回格式：{ image: "base64字符串或图片URL" }
-      dispatch({ type: SET_IMAGE, payload: response.data.image });
-    } catch (error) {
-      // 上传失败：打印错误日志（可扩展为分发错误提示action）
-      console.error('上传图像失败:', error);
+      const imageFile: ImageFile = {
+        id: `${new Date().getTime()}-${file.name}`,
+        file: file,
+        imageUrl: imageUrl,
+        nodules: [],
+        isDicom: isDicom,
+      };
+      
+      return imageFile;
+    });
+
+    if (imageFiles.length > 0) {
+      dispatch({ type: ADD_IMAGES, payload: imageFiles });
     }
   };
-
 
 /**
- * 调整窗宽窗位的异步action（Thunk）
- * 调用后端接口调整图像显示参数，并更新应用状态
- * @param ww - 新的窗宽值（Window Width）
- * @param wl - 新的窗位值（Window Level）
- * @returns ThunkAction - 可异步执行的Redux action
+ * 设置当前活动图像的Action
+ * @param imageId - 要设为活动的图像ID
  */
-export const adjustWindow =
-  (ww: number, wl: number): ThunkAction<void, AppState, unknown, AppActionTypes> =>
-  async (dispatch: Dispatch<any>, getState: () => AppState) => {
-    // 获取当前状态中的已上传图像路径（用于判断是否已上传图像）
-    const { uploadedImage } = getState();
-
-    // 仅当已上传图像时执行调整操作
-    if (uploadedImage) {
-      try {
-        // 调用后端调整窗宽窗位接口（假设接口地址为/api/adjust-window）
-        // 请求体包含当前窗宽、窗位和图像路径
-        const response = await axios.post('/api/adjust-window', { ww, wl, image: uploadedImage });
-
-        // 调整成功：
-        // 1. 分发SET_IMAGE action，更新为调整后的图像（后端可能返回处理后的新图像）
-        // 2. 分发SET_WW action，更新状态中的窗宽值
-        // 3. 分发SET_WL action，更新状态中的窗位值
-        dispatch({ type: SET_IMAGE, payload: response.data.image });
-        dispatch({ type: SET_WW, payload: ww });
-        dispatch({ type: SET_WL, payload: wl });
-      } catch (error) {
-        // 调整失败：打印错误日志
-        console.error('调整窗宽窗位失败:', error);
-      }
-    }
-  };
-
+export const setActiveImage = (imageId: string | null): AppActionTypes => ({
+  type: SET_ACTIVE_IMAGE,
+  payload: imageId,
+});
 
 /**
  * 检测图像中病灶的异步action（Thunk）
  * 调用后端AI检测接口，获取病灶坐标并更新状态
- * @returns ThunkAction - 可异步执行的Redux action
  */
 export const detectNodules =
   (): ThunkAction<void, AppState, unknown, AppActionTypes> =>
   async (dispatch: Dispatch<any>, getState: () => AppState) => {
-    // 获取当前状态中的已上传图像路径
-    const { uploadedImage } = getState();
+    const { images, activeImageId } = getState();
+    const activeImage = images.find(img => img.id === activeImageId);
 
-    // 仅当已上传图像时执行检测操作
-    if (uploadedImage) {
+    if (activeImage) {
       try {
-        // --- 真实后端API调用 ---
-        console.log('开始检测结节...');
-        
-        // 调用后端病灶检测接口（接口地址为/api/detect-nodules）
-        const response = await axios.post('/api/detect-nodules', { image: uploadedImage });
+        const formData = new FormData();
+        formData.append('file', activeImage.file);
 
-        // 检测成功：分发SET_NODULES action，将检测到的病灶列表存入状态
-        dispatch({ type: SET_NODULES, payload: response.data.nodules });
+        console.log(`开始检测结节 for image: ${activeImage.id}`);
+        const response = await axios.post('/api/detect-nodules', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        dispatch({
+          type: SET_NODULES_FOR_IMAGE,
+          payload: { imageId: activeImage.id, nodules: response.data.nodules },
+        });
+        dispatch(setShowNodules(true)); // 检测后自动显示结节
         console.log('结节检测完成，已更新状态。');
       } catch (error) {
-        // 检测失败：打印错误日志
         console.error('检测病灶失败:', error);
       }
     } else {
-      console.warn('请先上传图像再进行检测。');
+      console.warn('请先上传并选择一张图像再进行检测。');
     }
   };
 
+/**
+ * 调整窗宽窗位的异步action（Thunk）
+ * 注意：此功能在多图模式下可能需要调整，当前会影响全局WW/WL
+ */
+export const adjustWindow =
+  (ww: number, wl: number): ThunkAction<void, AppState, unknown, AppActionTypes> =>
+  async (dispatch: Dispatch<any>, getState: () => AppState) => {
+      // 在多图模式下，调整窗宽窗位可能需要更复杂的逻辑
+      // 例如，是调整所有图片还是仅活动图片？后端API是否支持？
+      // 这里暂时只更新全局状态，具体实现可能需要根据产品需求调整
+      dispatch({ type: SET_WW, payload: ww });
+      dispatch({ type: SET_WL, payload: wl });
+  };
 
 /**
  * 选择病灶的同步action创建函数
- * 用于标记当前选中的病灶（或取消选择）
- * @param nodule - 选中的病灶对象（或null表示取消选择）
- * @returns AppActionTypes - 包含SELECT_NODULE类型的action对象
  */
 export const selectNodule = (nodule: Nodule | null): AppActionTypes => ({
-  type: SELECT_NODULE,  // 操作类型：选择病灶
-  payload: nodule,      // 负载数据：选中的病灶（或null）
+  type: SELECT_NODULE,
+  payload: nodule,
+});
+
+/**
+ * 控制结节标注显示的同步action
+ */
+export const setShowNodules = (show: boolean): AppActionTypes => ({
+  type: SET_SHOW_NODULES,
+  payload: show,
 });
