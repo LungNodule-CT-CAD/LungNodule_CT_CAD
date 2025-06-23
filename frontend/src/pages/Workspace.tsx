@@ -6,7 +6,6 @@ import ImageUploader from '@components/ImageUploader';
 import ImageViewer from '@components/ImageViewer';
 import WindowAdjuster from '@components/WindowAdjuster';
 import NoduleList from '@components/NoduleList';
-import NoduleZoom from '@components/NoduleZoom';
 import ThumbnailList from '@components/ThumbnailList';
 import NoduleLocalZoom from '@components/NoduleLocalZoom';
 import logo from '@assets/logo.jpeg';

@@ -3,4 +3,7 @@ uvicorn
 Pillow
 python-multipart
 numpy
-pydicom 
+pydicom
+torch
+torchvision
+opencv-python-headless 

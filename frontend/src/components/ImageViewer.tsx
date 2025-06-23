@@ -100,7 +100,6 @@ const ImageViewer: React.FC = () => {
             handles: {
               start: { x: nodule.x, y: nodule.y, highlight: true, active: false },
               end: { x: nodule.x + nodule.width, y: nodule.y + nodule.height, highlight: true, active: false },
-              textBox: { active: false, hasMoved: false }
             }
           };
           cornerstoneTools.addToolState(element, 'RectangleRoi', measurementData);

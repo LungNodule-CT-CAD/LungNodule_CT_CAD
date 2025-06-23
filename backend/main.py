@@ -3,6 +3,7 @@ from io import BytesIO
 
 import pydicom
 from pydicom.errors import InvalidDicomError
+from predict import run_prediction, get_model
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +34,11 @@ app.add_middleware(
     allow_headers=["*"],  # 允许所有 HTTP 请求头
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """在应用启动时预加载模型。"""
+    get_model()
+
 # 3. 数据模型定义 (使用 Pydantic)
 class Nodule(BaseModel):
     id: int
@@ -55,72 +61,17 @@ def read_root():
 @app.post("/api/detect-nodules", response_model=NoduleDetectResponse)
 async def detect_nodules(file: UploadFile = File(...)):
     """
-    接收上传的单个CT图像文件，模拟肺结节检测。
-    它会尝试读取图像尺寸以生成合理的随机坐标，然后返回一个包含2到5个随机生成的结节信息的列表。
+    接收上传的单个CT图像文件，使用 PyTorch 模型进行真实的肺结节检测。
     """
+    # 1. 读取上传的文件内容
     contents = await file.read()
-    image_stream = BytesIO(contents)
 
-    # 设置默认图像尺寸
-    image_width, image_height = 512, 512
+    # 2. 调用模型进行预测
+    # predict.py 中的 run_prediction 函数负责处理所有逻辑
+    nodule_dicts = run_prediction(contents)
 
-    try:
-        # 尝试作为 DICOM 文件读取
-        # force=True 有助于处理一些不完全符合标准的文件
-        dcm = pydicom.dcmread(image_stream, force=True)
-        # DICOM 像素数组的 shape 通常是 (行, 列) -> (高, 宽)
-        if hasattr(dcm, 'pixel_array') and len(dcm.pixel_array.shape) >= 2:
-            image_height, image_width = dcm.pixel_array.shape[:2]
-    except InvalidDicomError:
-        # 如果不是有效的 DICOM 文件，则尝试作为常规图像文件（PNG, JPG等）打开
-        try:
-            # 重置 BytesIO 的指针，因为 pydicom.dcmread 可能已经移动了它
-            image_stream.seek(0)
-            image = Image.open(image_stream)
-            image_width, image_height = image.size
-        except Exception:
-            # 如果两种方式都失败，则使用默认的 512x512 尺寸
-            pass
-
-    nodules = []
-    # 随机生成 2 到 5 个结节
-    num_nodules = random.randint(2, 5)
-    
-    for i in range(num_nodules):
-        # 为防止无限循环，设置单个结节位置生成的尝试次数上限
-        for _ in range(50): # 最多尝试50次
-            # 随机生成结节的尺寸 (10到40像素)
-            nodule_w = random.randint(10, 40)
-            nodule_h = random.randint(10, 40)
-            
-            # 随机生成结节的位置，确保不会超出图像边界
-            if image_width > nodule_w and image_height > nodule_h:
-                nodule_x = random.randint(0, image_width - nodule_w)
-                nodule_y = random.randint(0, image_height - nodule_h)
-            else: # 如果图像太小，无法生成结节
-                nodule_x, nodule_y = 0, 0
-
-            # --- 防重叠检测 ---
-            is_overlapping = False
-            for existing_nodule in nodules:
-                # 检查两个矩形是否重叠
-                if (nodule_x < existing_nodule.x + existing_nodule.width and
-                    nodule_x + nodule_w > existing_nodule.x and
-                    nodule_y < existing_nodule.y + existing_nodule.height and
-                    nodule_y + nodule_h > existing_nodule.y):
-                    is_overlapping = True
-                    break # 发生重叠，跳出内部循环，重新生成
-            
-            if not is_overlapping:
-                nodules.append(
-                    Nodule(
-                        id=len(nodules) + 1,
-                        x=nodule_x,
-                        y=nodule_y,
-                        width=nodule_w,
-                        height=nodule_h,
-                    )
-                )
-                break # 成功找到不重叠的位置，跳出尝试循环，继续生成下一个结节
+    # 3. 将返回的字典列表转换为 Pydantic 模型列表
+    # FastAPI 会使用它来验证响应数据
+    nodules = [Nodule(**n) for n in nodule_dicts]
         
     return {"nodules": nodules} 
