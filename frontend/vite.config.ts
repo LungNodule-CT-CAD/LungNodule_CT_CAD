@@ -2,10 +2,12 @@
 import { defineConfig } from 'vite';
 // 关键修改：导入 SWC 版 React 插件
 import react from '@vitejs/plugin-react-swc'; 
+import viteCompression from 'vite-plugin-compression';
 
 export default defineConfig({
   plugins: [
     react(), // 使用 SWC 编译 React 代码
+    viteCompression(), // 启用gzip压缩
   ],
   // 其他配置（如 server、build、resolve 等）保持不变
   server: {

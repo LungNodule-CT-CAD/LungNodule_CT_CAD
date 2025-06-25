@@ -72,9 +72,9 @@ const ImageUploader: React.FC = () => {
       </button>
 
       {/* 文件格式提示文字（辅助用户操作） */}
-      <p className="uploader-info">
+      {/* <p className="uploader-info">
         请选择 DICOM 格式的影像文件 (.dcm, .dicom)
-      </p>
+      </p> */}
     </div>
   );
 };

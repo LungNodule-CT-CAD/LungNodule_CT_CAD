@@ -40,12 +40,15 @@ async def startup_event():
     get_model()
 
 # 3. 数据模型定义 (使用 Pydantic)
-class Nodule(BaseModel):
-    id: int
+# 新增Point模型，用于表示轮廓中的一个点
+class Point(BaseModel):
     x: int
     y: int
-    width: int
-    height: int
+
+# 更新Nodule模型，以匹配新的轮廓数据结构
+class Nodule(BaseModel):
+    id: int
+    contour: list[Point]
 
 class NoduleDetectResponse(BaseModel):
     nodules: list[Nodule]
@@ -55,13 +58,14 @@ class NoduleDetectResponse(BaseModel):
 @app.get("/")
 def read_root():
     """根路径，用于快速测试服务器是否正在运行。"""
-    return {"message": "CT Nodule Detection Mock API is running."}
+    return {"message": "CT Nodule Detection API is running."}
 
 
-@app.post("/api/detect-nodules", response_model=NoduleDetectResponse)
-async def detect_nodules(file: UploadFile = File(...)):
+@app.post("/api/predict", response_model=NoduleDetectResponse)
+async def predict(file: UploadFile = File(...)):
     """
-    接收上传的单个CT图像文件，使用 PyTorch 模型进行真实的肺结节检测。
+    接收上传的单个CT图像文件，使用 PyTorch 模型进行真实的肺结节检测，
+    并返回结节的轮廓点集。
     """
     # 1. 读取上传的文件内容
     contents = await file.read()
@@ -70,8 +74,5 @@ async def detect_nodules(file: UploadFile = File(...)):
     # predict.py 中的 run_prediction 函数负责处理所有逻辑
     nodule_dicts = run_prediction(contents)
 
-    # 3. 将返回的字典列表转换为 Pydantic 模型列表
-    # FastAPI 会使用它来验证响应数据
-    nodules = [Nodule(**n) for n in nodule_dicts]
-        
-    return {"nodules": nodules} 
+    # 3. 直接返回结果，FastAPI/Pydantic会自动完成验证和转换
+    return {"nodules": nodule_dicts} 

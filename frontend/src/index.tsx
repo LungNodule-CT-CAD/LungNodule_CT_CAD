@@ -6,6 +6,7 @@ import store from '@store/index';
 import App from './App';
 // 导入全局样式文件：定义应用级别的样式（如重置样式、全局字体等）
 import './index.css';
+import './assets/buttons.css';
 
 // 初始化 Cornerstone
 configureCornerstone();

@@ -2,14 +2,11 @@
 
 /**
  * 定义图像中病灶区域的结构接口
- * 用于描述医学影像（如CT/MRI）中标记的病灶位置和尺寸信息
+ * 用于描述医学影像（如CT/MRI）中标记的病灶轮廓信息
  */
 export interface Nodule {
     id: number;           // 病灶唯一标识ID（用于区分不同病灶）
-    x: number;            // 病灶区域左上角在图像中的X坐标（像素单位）
-    y: number;            // 病灶区域左上角在图像中的Y坐标（像素单位）
-    width: number;        // 病灶区域的宽度（像素单位）
-    height: number;       // 病灶区域的高度（像素单位）
+    contour: Array<{ x: number; y: number; }>; // 组成病灶轮廓的点集
 }
 
 /**
@@ -21,6 +18,7 @@ export interface ImageFile {
   imageUrl: string; // 对于DICOM，这是 Cornerstone 的 imageId；对于其他格式，是 Object URL
   nodules: Nodule[];
   isDicom: boolean; // 新增字段，标记是否为DICOM图像
+  patientId?: string; // 新增，DICOM患者ID
 }
 
 /**
@@ -34,6 +32,7 @@ export interface AppState {
   wl: number;                     // 窗位（Window Level）- 用于控制图像亮度的参数
   selectedNodule: Nodule | null;  // 当前选中的病灶（null表示未选择任何病灶）
   showNodules: boolean;           // 是否显示结节标注
+  detectStatus: DetectStatus; // 新增检测状态
 }
 
 // 定义所有可能的Action类型常量（用于标识状态操作类型）
@@ -44,6 +43,7 @@ export const SET_WL = 'SET_WL';            // 触发"设置窗位"操作的标�
 export const SET_NODULES_FOR_IMAGE = 'SET_NODULES_FOR_IMAGE';  // 触发"为指定图片设置结节"
 export const SELECT_NODULE = 'SELECT_NODULE'; // 触发"选择病灶"操作的标识
 export const SET_SHOW_NODULES = 'SET_SHOW_NODULES'; // 触发"显示/隐藏结节标注"操作的标识
+export const SET_DETECT_STATUS = 'SET_DETECT_STATUS';
 
 /**
  * 添加图像的Action接口
@@ -109,6 +109,14 @@ interface SetShowNodulesAction {
 }
 
 /**
+ * 设置检测状态的Action接口
+ */
+interface SetDetectStatusAction {
+  type: typeof SET_DETECT_STATUS;
+  payload: DetectStatus;
+}
+
+/**
  * 应用所有可能的Action类型集合
  * 联合类型定义，用于Redux reducer中判断具体的操作类型
  */
@@ -119,4 +127,7 @@ export type AppActionTypes =
   | SetWlAction
   | SetNodulesForImageAction
   | SelectNoduleAction
-  | SetShowNodulesAction;
+  | SetShowNodulesAction
+  | SetDetectStatusAction;
+
+export type DetectStatus = 'not_started' | 'detecting' | 'detected' | 'not_found';

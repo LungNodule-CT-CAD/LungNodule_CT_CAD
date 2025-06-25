@@ -1,63 +1,76 @@
-# **数据结构与状态管理文档**
+# **前端核心数据结构说明（2024升级版）**
 
-本文档旨在详细说明 **CT 肺结节检测系统前端** 应用中所使用的核心数据结构以及基于 **Redux** 的状态管理模型。
+本文件详细说明了前端各核心数据结构，已适配"结节轮廓点集+canvas绘制"方案。
 
 ---
 
-## **1. 核心数据结构**
+## 1. 结节结构 Nodule
 
-应用的数据模型围绕着图像 (`ImageFile`) 和结节 (`Nodule`) 进行设计。
-
-### **1.1. `Nodule` - 结节**
-
-描述在医学图像上检测到的一个结节（或病灶）的信息。
-
-```typescript
-interface Nodule {
-  id: number;     // 结节的唯一标识符
-  x: number;      // 结节边界框左上角的 X 坐标（像素）
-  y: number;      // 结节边界框左上角的 Y 坐标（像素）
-  width: number;  // 结节边界框的宽度（像素）
-  height: number; // 结节边界框的高度（像素）
+```ts
+export interface Nodule {
+  id: number; // 结节唯一标识
+  contour: Array<{ x: number; y: number }>; // 结节真实轮廓点集
 }
 ```
+- `contour` 是一个点集数组，数组内每个元素为 `{x, y}`，表示该结节的真实边界。
+- 轮廓点集为像素坐标，直接对应原始图像。
 
-### **1.2. `ImageFile` - 图像文件**
+---
 
-代表一个用户上传的图像文件及其相关状态。
+## 2. 图像文件结构 ImageFile
 
-```typescript
-interface ImageFile {
-  id: string;         // 基于时间戳和文件名生成的唯一 ID
-  file: File;         // 浏览器原生的 File 对象
-  imageUrl: string;   // 图像的访问 URL。对于 DICOM，是 Cornerstone 的 imageId；对于其他格式，是 Object URL
-  nodules: Nodule[];  // 与此图像关联的结节列表
-  isDicom: boolean;   // 标记此文件是否为 DICOM 格式
+```ts
+export interface ImageFile {
+  id: string; // 唯一ID
+  file: File;
+  imageUrl: string; // cornerstone的imageId或Object URL
+  nodules: Nodule[]; // 检测到的所有结节
+  isDicom: boolean; // 是否为DICOM
 }
 ```
 
 ---
 
-## **2. Redux 状态管理 (`AppState`)**
+## 3. 全局状态结构 AppState
 
-应用使用 Redux 来管理全局状态，确保数据流的一致性和可预测性。根状态 (`AppState`) 的结构如下：
-
-### **2.1. `AppState` 结构**
-
-```typescript
-interface AppState {
-  images: ImageFile[];          // 存储所有上传的图像对象
-  activeImageId: string | null; // 当前正在查看和操作的图像的 ID
-  ww: number;                   // 全局窗宽 (Window Width)，用于调整图像对比度
-  wl: number;                   // 全局窗位 (Window Level)，用于调整图像亮度
-  selectedNodule: Nodule | null;// 当前选中的结节对象，用于高亮和局部放大
-  showNodules: boolean;         // 控制是否在图像上显示所有结节的标注框
+```ts
+export interface AppState {
+  images: ImageFile[];
+  activeImageId: string | null;
+  ww: number; // 窗宽
+  wl: number; // 窗位
+  selectedNodule: Nodule | null; // 当前高亮结节
+  showNodules: boolean; // 是否显示结节轮廓
 }
 ```
 
 ---
 
-## **3. Redux Actions**
+## 4. 交互与渲染说明
+- 前端所有结节标注均通过 canvas 绘制，不再依赖 cornerstone-tools 标注系统。
+- 主图像区采用双canvas分层渲染，底层为医学影像，顶层canvas绘制所有结节轮廓。
+- 轮廓高亮、缩放、平移、切换等交互全部实时同步。
+- 局部放大区同样基于 contour 点集绘制。
+
+---
+
+## 5. 典型数据示例
+
+```json
+{
+  "id": 1,
+  "contour": [
+    { "x": 100, "y": 120 },
+    { "x": 102, "y": 121 },
+    { "x": 105, "y": 123 }
+    // ...
+  ]
+}
+```
+
+---
+
+## **Redux Actions**
 
 Actions 是触发状态更新的唯一方式。以下是本应用定义的核心 Actions。
 

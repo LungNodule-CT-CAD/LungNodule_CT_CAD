@@ -16,8 +16,11 @@ import {                        // 导入应用状态类型、操作类型及常
   SET_SHOW_NODULES,
   SET_WW,
   SET_WL,
+  SET_DETECT_STATUS,
+  DetectStatus
 } from './types';
 import cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
+import dicomParser from 'dicom-parser';
 
 /**
  * 上传多个图像文件的Thunk Action
@@ -26,15 +29,22 @@ import cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
 export const uploadImages =
   (files: File[]): ThunkAction<void, AppState, unknown, AppActionTypes> =>
   async (dispatch: Dispatch<AppActionTypes>) => {
-    const imageFiles: ImageFile[] = files.map(file => {
+    const imageFiles: ImageFile[] = await Promise.all(files.map(async file => {
       const isDicom = file.type === 'application/dicom' || file.name.toLowerCase().endsWith('.dcm');
       let imageUrl;
+      let patientId = undefined;
 
       if (isDicom) {
-        // 对于DICOM文件，使用Cornerstone的加载器生成一个唯一的imageId
         imageUrl = cornerstoneWADOImageLoader.wadouri.fileManager.add(file);
+        // 解析DICOM PatientID
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const dataSet = dicomParser.parseDicom(new Uint8Array(arrayBuffer));
+          patientId = dataSet.string('x00100020') || undefined;
+        } catch (e) {
+          patientId = undefined;
+        }
       } else {
-        // 对于常规图像（PNG, JPG），创建一个浏览器可以原生显示的对象URL
         imageUrl = URL.createObjectURL(file);
       }
 
@@ -44,10 +54,10 @@ export const uploadImages =
         imageUrl: imageUrl,
         nodules: [],
         isDicom: isDicom,
+        patientId: patientId,
       };
-      
       return imageFile;
-    });
+    }));
 
     if (imageFiles.length > 0) {
       dispatch({ type: ADD_IMAGES, payload: imageFiles });
@@ -75,25 +85,33 @@ export const detectNodules =
 
     if (activeImage) {
       try {
+        dispatch(setDetectStatus('detecting'));
         const formData = new FormData();
         formData.append('file', activeImage.file);
 
         console.log(`开始检测结节 for image: ${activeImage.id}`);
-        const response = await axios.post('/api/detect-nodules', formData, {
+        const response = await axios.post('/api/predict', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-
+        const nodules = response.data.nodules;
         dispatch({
           type: SET_NODULES_FOR_IMAGE,
-          payload: { imageId: activeImage.id, nodules: response.data.nodules },
+          payload: { imageId: activeImage.id, nodules },
         });
-        dispatch(setShowNodules(true)); // 检测后自动显示结节
+        dispatch(setShowNodules(true));
+        if (nodules && nodules.length > 0) {
+          dispatch(setDetectStatus('detected'));
+        } else {
+          dispatch(setDetectStatus('not_found'));
+        }
         console.log('结节检测完成，已更新状态。');
       } catch (error) {
+        dispatch(setDetectStatus('not_found'));
         console.error('检测病灶失败:', error);
       }
     } else {
-      console.warn('请先上传并选择一张图像再进行检测。');
+      dispatch(setDetectStatus('not_started'));
+      console.warn('请先上传并选择一张图片再进行检测。');
     }
   };
 
@@ -125,4 +143,9 @@ export const selectNodule = (nodule: Nodule | null): AppActionTypes => ({
 export const setShowNodules = (show: boolean): AppActionTypes => ({
   type: SET_SHOW_NODULES,
   payload: show,
+});
+
+export const setDetectStatus = (status: DetectStatus): AppActionTypes => ({
+  type: SET_DETECT_STATUS,
+  payload: status,
 });

@@ -1,6 +1,6 @@
 import { Reducer } from 'redux'; 
 // 导入应用状态类型、操作类型集合及具体操作类型常量
-import { AppState, AppActionTypes, SELECT_NODULE, SET_WL, SET_WW, ADD_IMAGES, SET_ACTIVE_IMAGE, SET_NODULES_FOR_IMAGE, SET_SHOW_NODULES } from './types';
+import { AppState, AppActionTypes, SELECT_NODULE, SET_WL, SET_WW, ADD_IMAGES, SET_ACTIVE_IMAGE, SET_NODULES_FOR_IMAGE, SET_SHOW_NODULES, SET_DETECT_STATUS } from './types';
 
 /**
  * 应用的初始状态
@@ -12,6 +12,7 @@ const initialState: AppState = {
   wl: -600,                  
   selectedNodule: null,      
   showNodules: false,        // 初始不显示结节标注
+  detectStatus: 'not_started', // 新增，初始为未检测
 };
 
 const rootReducer: Reducer<AppState, AppActionTypes> = (state = initialState, action): AppState => {
@@ -23,10 +24,11 @@ const rootReducer: Reducer<AppState, AppActionTypes> = (state = initialState, ac
         ...state,
         images: [...state.images, ...action.payload],
         activeImageId: newActiveId,
+        detectStatus: 'not_started', // 新增，上传新图片时重置检测状态
       };
 
     case SET_ACTIVE_IMAGE:
-      return { ...state, activeImageId: action.payload, selectedNodule: null }; // 切换图片时清空上一张的结节选择
+      return { ...state, activeImageId: action.payload, selectedNodule: null, detectStatus: 'not_started' }; // 切换图片时重置检测状态
 
     // 处理"设置窗宽"操作
     case SET_WW:
@@ -53,6 +55,9 @@ const rootReducer: Reducer<AppState, AppActionTypes> = (state = initialState, ac
     // 处理"显示/隐藏结节标注"操作
     case SET_SHOW_NODULES:
       return { ...state, showNodules: action.payload };
+
+    case SET_DETECT_STATUS:
+      return { ...state, detectStatus: action.payload };
 
     // 未匹配到任何操作类型时（默认情况）
     default:
