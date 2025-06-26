@@ -2,27 +2,44 @@
 
 ## **1. 项目概述**
 
-本项目是一个基于 **FastAPI** 和 **PyTorch** 构建的、具备真实AI推理能力的后端服务器，专为 `CT 肺结节检测系统` 提供核心分析功能。它取代了原有的模拟 (Mock) API，能够接收医学影像并执行真实的肺结节检测。
+本项目是一个基于 **FastAPI** 和 **PyTorch** 构建的、具备真实AI推理能力的后端服务器，专为 `CT 肺结节检测系统` 提供核心分析功能。它能够接收医学影像，并通过 **单阶段分割模型 (U-Net)** 直接定位出疑似肺结节的区域。
 
 **核心功能**:
--   **真实结节检测**: 提供一个 `/api/detect-nodules` 接口，接收前端上传的图像文件（优先支持 DICOM 格式），利用 **UNet** 模型进行推理，并返回检测到的结节边界框坐标。
--   **GPU 加速**: 能够自动检测并利用 `NVIDIA CUDA` 进行 GPU 加速，大幅提升模型推理速度。
--   **专业图像预处理**: 内置专业的 DICOM 图像处理流程，包括应用 Hounsfield Unit (HU) 转换和肺窗（Lung Window）技术，以确保模型接收到最优化的输入。
--   **CORS 支持**: 内置跨域资源共享 (CORS) 中间件，允许来自前端开发服务器的请求。
+-   **单阶段结节检测**: 提供一个 `/api/predict` 接口，接收前端上传的图像文件（优先支持 DICOM 格式），利用 **U-Net** 模型进行推理，并返回检测到的结节轮廓坐标。
+-   **GPU 加速**: 自动检测并利用 `NVIDIA CUDA` 进行 GPU 加速，大幅提升模型推理速度。
+-   **专业图像预处理**: 内置专业的 DICOM 图像处理流程，包括应用 Hounsfield Unit (HU) 转换和肺窗（Lung Window）技术，以确保模型接收到最优化的输入。对于非 DICOM 图像，则执行标准灰度处理。
+-   **CORS 支持**: 内置跨域资源共享 (CORS) 中间件，允许指定的来源进行请求，方便前后端分离开发。
 
 ---
 
-## **2. 模型架构**
+## **2. 技术栈与架构**
 
--   **模型结构**: 系统采用在 `model.py` 文件中定义的 **UNet** 网络结构。这是一个在医学图像分割领域被广泛应用的经典模型。
--   **模型权重**: 系统会加载 `best_model.pth` 文件中存储的预训练权重。
--   **加载机制**: 在 FastAPI 应用启动时，模型会被自动加载到内存（优先加载到 GPU），以确保首次 API 请求的响应速度。
+-   **Web 框架**: FastAPI
+-   **AI 框架**: PyTorch
+-   **核心依赖**: Uvicorn, Pydicom, OpenCV-Python, python-multipart
+-   **模型架构**: 系统采用在 `unet_model.py` 文件中定义的 **U-Net** 网络结构。这是一个在医学图像分割领域被广泛应用的经典模型。
+-   **模型加载**: 在 FastAPI 应用启动时，模型 (`model-best.pth`) 会被自动预加载到内存（优先加载到 GPU），以确保 API 请求的快速响应。
 
 ---
 
-## **3. 环境设置与运行**
+## **3. 文件结构**
 
-在运行此后端服务器之前，请确保您已安装 Python 3.7+ 和 NVIDIA 显卡驱动（若希望使用 GPU）。
+```
+backend/
+├── main.py                 # FastAPI 应用主文件，定义 API 端点
+├── predict.py              # 核心预测逻辑，包括图像预处理、模型推理和后处理
+├── unet_model.py           # U-Net 模型的 PyTorch 定义
+├── requirements.txt        # 项目依赖
+├── model-best.pth          # (必要) 默认加载的预训练 U-Net 模型权重
+├── model-finetuned.pth     # (可选) 另一个预训练模型权重，当前代码未直接使用
+└── readme.md               # 项目说明文档
+```
+
+---
+
+## **4. 环境设置与运行**
+
+在运行此后端服务器之前，请确保您已安装 Python 3.8+。
 
 1.  **克隆或下载项目到本地。**
 
@@ -34,23 +51,16 @@
 
     # 激活虚拟环境 (Windows)
     .\\venv\\Scripts\\activate
+    
     # 激活 (macOS / Linux)
-    source venv/bin/activate
+    # source venv/bin/activate
     ```
 
 3.  **安装依赖:**
-    为确保能使用 GPU，推荐按以下步骤安装：
     ```bash
-    # 卸载可能存在的 CPU 版本的 torch
-    pip uninstall torch torchvision -y
-
-    # 安装 GPU 版本的 torch (以 CUDA 12.1 为例)
-    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-
-    # 安装其余依赖
     pip install -r requirements.txt
     ```
-    *如果你的机器没有 NVIDIA GPU，可以直接运行 `pip install -r requirements.txt` 来安装 CPU 版本。*
+    *如果希望使用 GPU，请确保已安装与 PyTorch 兼容的 NVIDIA 驱动和 CUDA Toolkit。`requirements.txt` 中的 `torch` 会根据您的环境自动安装相应版本。*
 
 4.  **启动开发服务器：**
     在 `backend` 目录下，运行以下命令来启动 FastAPI 服务器：
@@ -65,7 +75,7 @@
 
 ---
 
-## **4. API 接口**
+## **5. API 接口**
 
 本项目目前提供以下 API 接口：
 
@@ -74,28 +84,36 @@
 -   **成功响应 (200 OK)**:
     ```json
     {
-      "message": "CT Nodule Detection Mock API is running."
+        "status": "healthy",
+        "message": "Lung Nodule Detection API is running."
     }
     ```
 
-### **POST /api/detect-nodules**
--   **功能**: 对上传的单个图像文件执行真实的肺结节检测。
+### **POST /api/predict**
+-   **功能**: 对上传的单个图像文件执行肺结节检测。
 -   **请求**: `multipart/form-data`，包含一个名为 `file` 的文件字段。
 -   **处理流程**:
-    1.  读取图像字节。
-    2.  进行预处理（DICOM肺窗应用、归一化、缩放）。
-    3.  将处理后的数据送入 UNet 模型进行推理，生成分割蒙版 (Mask)。
-    4.  对蒙版进行后处理，提取轮廓并计算外接矩形。
-    5.  将矩形坐标格式化为 JSON 返回。
+    1.  读取图像字节，优先作为 DICOM 文件处理，应用肺窗和 HU 值转换；如果失败，则作为常规图像（如 PNG/JPG）进行灰度处理。
+    2.  将图像归一化、缩放到模型所需的尺寸 (512x512)。
+    3.  将处理后的数据送入预加载的 U-Net 模型进行推理，生成分割蒙版 (Mask)。
+    4.  对蒙版进行后处理，通过连通域分析过滤掉面积过小的噪声区域。
+    5.  提取最终蒙版中各个区域的轮廓。
+    6.  将每个结节的轮廓点集格式化为 JSON 返回。
 -   **成功响应 (200 OK)**:
     ```json
     {
       "nodules": [
-        { "id": 1, "x": 150, "y": 200, "width": 20, "height": 20 },
-        { "id": 2, "x": 250, "y": 300, "width": 25, "height": 25 }
+        { 
+          "id": 1, 
+          "contour": [
+            { "x": 150, "y": 200 }, 
+            { "x": 151, "y": 200 },
+            ...
+          ]
+        }
       ]
     }
     ```
 
 ---
-*该 README 由 AI 工程师在完成模型集成任务后自动生成和更新。*
+*该 README 已根据最新的单阶段 U-Net 检测流程进行更新。*

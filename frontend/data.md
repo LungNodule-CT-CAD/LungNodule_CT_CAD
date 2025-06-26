@@ -91,7 +91,7 @@ Actions 是触发状态更新的唯一方式。以下是本应用定义的核心
     -   **处理**: 会判断文件是否为 DICOM 格式，并相应地生成 `imageUrl`。
 
 -   **`detectNodules()`**
-    -   **功能**: 这是核心的业务 action。它获取当前活动图像，通过 `axios` 将其发送到后端 API (`/api/detect-nodules`)。
+    -   **功能**: 这是核心的业务 action。它获取当前活动图像，通过 `axios` 将其发送到后端 API (`/api/predict`)。
     -   **处理**: 成功后，它会分发 `SET_NODULES_FOR_IMAGE` action 来更新结节数据，并分发 `SET_SHOW_NODULES` action 来确保标注可见。
 
 -   **`adjustWindow(ww: number, wl: number)`**

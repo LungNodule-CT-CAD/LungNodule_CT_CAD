@@ -22,6 +22,10 @@ import {                        // 导入应用状态类型、操作类型及常
 import cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
 import dicomParser from 'dicom-parser';
 
+
+// 定义后端的公网基础地址
+const API_BASE_URL = 'https://easily-emerging-tarpon.ngrok-free.app';
+
 /**
  * 上传多个图像文件的Thunk Action
  * @param files - 用户选择的File对象数组

@@ -1,9 +1,7 @@
+torch
+pydicom
+opencv-python-headless
 fastapi
 uvicorn
-Pillow
 python-multipart
-numpy
-pydicom
-torch
-torchvision
-opencv-python-headless 
+numpy 
