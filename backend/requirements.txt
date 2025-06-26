@@ -1,6 +1,9 @@
 torch
+torchvision
 pydicom
 opencv-python-headless
+scikit-image
+scipy
 fastapi
 uvicorn
 python-multipart

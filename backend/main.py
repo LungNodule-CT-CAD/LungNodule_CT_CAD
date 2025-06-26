@@ -9,7 +9,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from predict import run_prediction, get_model
+from predict import run_prediction, get_models
 
 # --- 日志配置 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -47,7 +47,7 @@ async def startup_event():
     """在应用启动时预加载模型。"""
     logger.info("正在预加载模型...")
     try:
-        get_model()  # 调用模型加载函数
+        get_models()  # 调用模型加载函数
         logger.info("模型预加载成功！")
     except Exception as e:
         logger.error(f"模型预加载失败: {e}", exc_info=True)
